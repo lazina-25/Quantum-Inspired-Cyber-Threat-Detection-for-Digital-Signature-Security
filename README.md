@@ -119,8 +119,8 @@ Ensure you have the following installed on your system:
 - **Git**
 
 ```bash
-git clone https://github.com/your-org/quantum-qds-threat-detection.git
-cd quantum-qds-threat-detection
+git clone https://github.com/atulpal11/SIH_2026.git
+cd SIH_2026
 ```
 
 ---
