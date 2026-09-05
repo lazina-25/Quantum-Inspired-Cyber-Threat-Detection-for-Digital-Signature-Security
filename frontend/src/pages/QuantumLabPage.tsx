@@ -9,38 +9,41 @@ export const QuantumLabPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Sub-Nav */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-4 sm:p-6 rounded-2xl border border-cyan-500/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-mono mb-2">
-            <Atom className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Quantum Simulation Workbench (Qiskit 2.5)</span>
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-charcoal text-xs font-semibold mb-2">
+            <Atom className="w-3.5 h-3.5 text-yellow-800" />
+            <span>Quantum Simulation Lab</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white">Quantum Physics & Teleportation Lab</h1>
+          <h1 className="text-2xl font-bold text-charcoal">Quantum Physics & Teleportation Lab</h1>
+          <p className="text-xs text-charcoal-500 mt-1">
+            Simulate 2-qubit Bell entanglement states and 3-qubit Bennett teleportation protocols.
+          </p>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex rounded-xl bg-slate-900 border border-slate-800 p-1 font-mono text-xs">
+        <div className="flex rounded-xl bg-surface p-1 text-xs font-medium shrink-0 border border-[#EAEAEA]">
           <button
             onClick={() => setLabTab('bell')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
               labTab === 'bell'
-                ? 'bg-cyan-950 border border-cyan-500/60 text-cyan-300 font-bold shadow-md shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-yellow-400 text-charcoal font-bold shadow-xs'
+                : 'text-charcoal-600 hover:text-charcoal'
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>1. Bell Entanglement</span>
+            <span>Bell State Simulation</span>
           </button>
           <button
             onClick={() => setLabTab('teleport')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
               labTab === 'teleport'
-                ? 'bg-cyan-950 border border-cyan-500/60 text-cyan-300 font-bold shadow-md shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-yellow-400 text-charcoal font-bold shadow-xs'
+                : 'text-charcoal-600 hover:text-charcoal'
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
-            <span>2. Quantum Teleportation</span>
+            <span>Quantum Teleportation</span>
           </button>
         </div>
       </div>

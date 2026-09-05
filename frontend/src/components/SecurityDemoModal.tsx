@@ -6,7 +6,7 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
-  Award
+  Award,
 } from 'lucide-react';
 import { apiClient } from '../services/api';
 
@@ -65,30 +65,30 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-4xl rounded-2xl glass-panel border border-cyan-500/40 p-6 sm:p-8 space-y-6 shadow-2xl my-8 bg-[#090e1a]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-4xl rounded-2xl bg-white border border-border p-6 sm:p-8 space-y-6 shadow-2xl my-8">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/40 text-cyan-400">
-              <Award className="w-6 h-6" />
+            <div className="p-2.5 rounded-xl bg-yellow-100 border border-yellow-300 text-charcoal">
+              <Award className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-extrabold text-white">SIH 2026 Judge Security Demo</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-700 text-cyan-300 font-mono">
-                  Full 7-Step Orchestration
+                <h2 className="text-xl font-bold text-charcoal">Security Workflow Demo</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-50 border border-yellow-200 text-charcoal font-mono font-semibold">
+                  7-Step End-to-End Orchestration
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Automated end-to-end verification and 5-vector threat neutralization pass (Zero AI/ML).
+              <p className="text-xs text-secondary mt-0.5">
+                Automated scenario demonstrating signature creation, acceptance, and 5-vector threat neutralization.
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+            className="p-2 rounded-xl text-secondary hover:text-charcoal hover:bg-surface transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -96,15 +96,15 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
 
         {/* Action Trigger */}
         {!demoData && !running && (
-          <div className="p-6 rounded-xl bg-slate-900/80 border border-slate-800 text-center space-y-4">
-            <p className="text-xs text-slate-300 font-mono max-w-xl mx-auto leading-relaxed">
-              Click below to execute the complete verification scenario: Alice signs $\to$ Bob accepts $\to$ 5 simultaneous cyber threats simulated and mathematically classified in real-time.
+          <div className="p-8 rounded-xl bg-surface border border-border text-center space-y-4">
+            <p className="text-xs text-secondary max-w-xl mx-auto leading-relaxed">
+              Click below to execute the complete verification scenario: Alice signs &rarr; Bob accepts &rarr; 5 cyber attack scenarios simulated and mathematically classified in real-time.
             </p>
             <button
               onClick={handleRunDemo}
-              className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all"
+              className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-charcoal font-bold text-sm shadow-sm transition-all"
             >
-              <Play className="w-4 h-4" />
+              <Play className="w-4 h-4 fill-current" />
               <span>Run Automated Security Demo</span>
             </button>
           </div>
@@ -112,15 +112,15 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
 
         {running && (
           <div className="p-12 text-center space-y-3 font-mono">
-            <RefreshCw className="w-8 h-8 animate-spin text-cyan-400 mx-auto" />
-            <div className="text-sm text-cyan-300 font-bold">Executing 7-Step Quantum Security Orchestration...</div>
-            <div className="text-xs text-slate-500">Teleporting quantum states & measuring projective invariants</div>
+            <RefreshCw className="w-8 h-8 animate-spin text-yellow-500 mx-auto" />
+            <div className="text-sm text-charcoal font-bold">Executing 7-Step Quantum Security Orchestration...</div>
+            <div className="text-xs text-secondary">Teleporting quantum states & measuring projective invariants</div>
           </div>
         )}
 
         {error && (
-          <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs font-mono flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-mono flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
             <span>{error}</span>
           </div>
         )}
@@ -130,23 +130,23 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
           <div className="space-y-6">
             {/* Top Scorecard */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
-                <span className="text-slate-500 text-[10px] uppercase block">Steps Executed</span>
-                <span className="text-lg font-black text-white">{demoData.total_steps} / 7 Steps</span>
+              <div className="p-3.5 rounded-xl bg-surface border border-border">
+                <span className="text-secondary text-[10px] uppercase block font-sans">Steps Executed</span>
+                <span className="text-lg font-bold text-charcoal">{demoData.total_steps} / 7 Steps</span>
               </div>
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
-                <span className="text-slate-500 text-[10px] uppercase block">Total Duration</span>
-                <span className="text-lg font-black text-cyan-400">{demoData.total_duration_ms.toFixed(1)} ms</span>
+              <div className="p-3.5 rounded-xl bg-surface border border-border">
+                <span className="text-secondary text-[10px] uppercase block font-sans">Total Duration</span>
+                <span className="text-lg font-bold text-charcoal">{demoData.total_duration_ms.toFixed(1)} ms</span>
               </div>
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
-                <span className="text-slate-500 text-[10px] uppercase block">Threat Detection Rate</span>
-                <span className="text-lg font-black text-emerald-400">
+              <div className="p-3.5 rounded-xl bg-surface border border-border">
+                <span className="text-secondary text-[10px] uppercase block font-sans">Threats Neutralized</span>
+                <span className="text-lg font-bold text-emerald-600">
                   {(demoData.overall_detection_rate * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
-                <span className="text-slate-500 text-[10px] uppercase block">Processed Shots</span>
-                <span className="text-lg font-black text-indigo-400">{demoData.shots_processed_total.toLocaleString()}</span>
+              <div className="p-3.5 rounded-xl bg-surface border border-border">
+                <span className="text-secondary text-[10px] uppercase block font-sans">Processed Shots</span>
+                <span className="text-lg font-bold text-charcoal">{demoData.shots_processed_total.toLocaleString()}</span>
               </div>
             </div>
 
@@ -159,28 +159,28 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
                     key={step.step_number}
                     className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs ${
                       isAccept
-                        ? 'bg-emerald-950/20 border-emerald-800/80'
-                        : 'bg-rose-950/20 border-rose-800/80'
+                        ? 'bg-emerald-50/40 border-emerald-200'
+                        : 'bg-red-50/40 border-red-200'
                     }`}
                   >
                     <div className="flex items-start space-x-3">
                       <div
                         className={`p-1.5 rounded-lg border shrink-0 mt-0.5 ${
                           isAccept
-                            ? 'bg-emerald-950 border-emerald-700 text-emerald-400'
-                            : 'bg-rose-950 border-rose-700 text-rose-400'
+                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
+                            : 'bg-red-100 border-red-200 text-red-700'
                         }`}
                       >
                         {isAccept ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-slate-500 font-bold text-[10px]">STEP {step.step_number}:</span>
-                          <span className="font-bold text-white text-sm">{step.step_name}</span>
+                          <span className="text-secondary font-bold text-[10px]">STEP {step.step_number}:</span>
+                          <span className="font-bold text-charcoal text-sm">{step.step_name}</span>
                         </div>
-                        <p className="text-slate-400 text-[11px] font-sans mt-0.5">{step.description}</p>
+                        <p className="text-secondary text-[11px] font-sans mt-0.5">{step.description}</p>
                         {step.telemetry?.evidence && (
-                          <p className="text-cyan-300 text-[10px] mt-1 italic font-mono">
+                          <p className="text-secondary text-[10px] mt-1 font-mono bg-white p-1.5 rounded-lg border border-border">
                             Evidence: {step.telemetry.evidence}
                           </p>
                         )}
@@ -191,13 +191,13 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
                       <span
                         className={`px-2.5 py-1 rounded-full border text-[10px] font-bold ${
                           isAccept
-                            ? 'bg-emerald-950 border-emerald-600 text-emerald-300'
-                            : 'bg-rose-950 border-rose-600 text-rose-300'
+                            ? 'bg-emerald-100 border-emerald-200 text-emerald-700'
+                            : 'bg-red-100 border-red-200 text-red-700'
                         }`}
                       >
                         {step.verdict}
                       </span>
-                      <span className="text-slate-500 text-[10px] block mt-1">{step.execution_time_ms} ms</span>
+                      <span className="text-secondary text-[10px] block mt-1">{step.execution_time_ms} ms</span>
                     </div>
                   </div>
                 );
@@ -205,18 +205,18 @@ export const SecurityDemoModal: React.FC<SecurityDemoModalProps> = ({
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+            <div className="flex justify-between items-center pt-2 border-t border-border">
               <button
                 onClick={handleRunDemo}
                 disabled={running}
-                className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-cyan-400 text-xs font-mono flex items-center space-x-2"
+                className="px-4 py-2 rounded-xl bg-surface hover:bg-yellow-50 border border-border text-charcoal text-xs font-semibold flex items-center space-x-2 transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Re-run Security Demo</span>
               </button>
               <button
                 onClick={onClose}
-                className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs font-mono"
+                className="px-5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-charcoal font-bold text-xs transition-colors shadow-sm"
               >
                 Close & Return
               </button>

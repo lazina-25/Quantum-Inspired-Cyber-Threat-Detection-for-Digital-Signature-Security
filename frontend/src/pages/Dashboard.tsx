@@ -1,29 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ShieldCheck,
-  ShieldAlert,
-  Flame,
   KeyRound,
-  Zap,
+  Skull,
+  ShieldCheck,
   Activity,
   ArrowRight,
-  Cpu,
   RefreshCw,
-  Skull,
-  UserX,
-  History,
-  Radio,
-  Lock,
-  FileCheck,
-  Play
+  Atom,
+  TrendingUp,
+  Play,
+  CheckCircle2,
+  Clock,
+  Shield,
 } from 'lucide-react';
 import { getAnalyticsSummaryApi } from '../services/analyticsApi';
 import { AnalyticsSummaryResponse } from '../types/analytics';
 import { useHealth } from '../hooks/useHealth';
 import { SecurityDemoModal } from '../components/SecurityDemoModal';
+import { NavTab } from '../components/Navbar';
 
 interface DashboardProps {
-  onNavigate?: (tab: any) => void;
+  onNavigate?: (tab: NavTab) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
@@ -53,6 +50,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     fetchSummary();
   };
 
+  const hasSignatures = (summary?.total_signatures ?? 0) > 0;
+  const hasAttacks = (summary?.total_attacks ?? 0) > 0;
+  const hasThreatAnalyses = (summary?.total_threat_analyses ?? 0) > 0;
+  const hasEvents = (summary?.recent_events?.length ?? 0) > 0;
+
   return (
     <div className="space-y-8 pb-12">
       <SecurityDemoModal
@@ -61,313 +63,365 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         onFinished={fetchSummary}
       />
 
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl glass-panel p-6 sm:p-8 border border-cyan-500/20">
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-mono mb-3">
-              <Zap className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Smart India Hackathon 2026 &bull; Advanced Security Platform</span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Quantum-Inspired <span className="text-gradient-cyan">Cyber Threat Detection</span>
-            </h1>
-            <p className="mt-2 text-slate-300 text-sm leading-relaxed">
-              Real-time cyber threat detection and deterministic verification framework for teleportation-based Quantum Digital Signature (QDS) protocols. Strictly zero AI/ML.
-            </p>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-white p-6 sm:p-10 border border-[#EAEAEA] shadow-sm">
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-charcoal text-xs font-semibold mb-4">
+            <Shield className="w-3.5 h-3.5 text-yellow-700" />
+            <span>Quantum QDS &bull; Secure. Verifiable. Future-Ready.</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-charcoal tracking-tight">
+            Quantum-Inspired Cyber Threat Detection
+          </h1>
+
+          <p className="mt-3 text-charcoal-500 text-sm sm:text-base leading-relaxed">
+            Secure and verify digital signatures using quantum principles and statistical analysis.
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => onNavigate && onNavigate('signatures')}
+              className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs sm:text-sm shadow-sm transition-all"
+            >
+              <span>Get Started</span>
+              <ArrowRight className="w-4 h-4 text-charcoal" />
+            </button>
+
+            <button
+              onClick={() => onNavigate && onNavigate('quantum')}
+              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-charcoal font-semibold text-xs sm:text-sm shadow-xs transition-all"
+            >
+              <span>Explore</span>
+            </button>
+
             <button
               onClick={() => setDemoOpen(true)}
-              className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs font-mono shadow-lg shadow-cyan-500/25 transition-all"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-surface hover:bg-yellow-50 text-charcoal font-medium text-xs sm:text-sm border border-[#EAEAEA] transition-colors"
             >
-              <Play className="w-4 h-4" />
-              <span>Run Security Demo</span>
+              <Play className="w-3.5 h-3.5 text-yellow-600 fill-yellow-600" />
+              <span>Run Demo</span>
             </button>
 
             <button
               onClick={handleRefreshAll}
               disabled={refreshing}
-              className="inline-flex items-center space-x-2 px-4 py-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-slate-200 hover:text-cyan-300 text-xs font-mono transition-all disabled:opacity-50"
+              className="p-2.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-charcoal-500 hover:text-charcoal transition-colors disabled:opacity-50"
+              title="Refresh Telemetry"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : ''}`} />
-              <span>Refresh</span>
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-charcoal' : ''}`} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Top 4 KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Signatures */}
-        <div className="glass-panel p-5 rounded-xl border border-slate-800 flex items-center space-x-4">
-          <div className="p-3 rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-400">
-            <KeyRound className="w-6 h-6" />
+      {/* 4 Clean Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {/* Metric 1: Total Signatures */}
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Total Signatures</span>
+            <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
+              <KeyRound className="w-4 h-4 text-yellow-800" />
+            </div>
           </div>
-          <div>
-            <span className="text-slate-400 text-xs font-mono uppercase tracking-wider block">Total Signatures</span>
-            <span className="text-2xl font-black text-white font-mono">{summary?.total_signatures ?? 0}</span>
-            <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-              <span className="text-emerald-400 font-bold">{summary?.valid_signatures ?? 0} Valid</span> &bull;{' '}
-              <span className="text-rose-400 font-bold">{summary?.failed_signatures ?? 0} Rejected</span>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-charcoal font-sans">
+              {summary?.total_signatures ?? 0}
+            </span>
+            <p className="mt-1 text-xs text-charcoal-500">
+              {hasSignatures
+                ? `${summary?.valid_signatures ?? 0} valid, ${summary?.failed_signatures ?? 0} rejected`
+                : 'No signatures created yet'}
+            </p>
+          </div>
+        </div>
+
+        {/* Metric 2: Attacks Simulated */}
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Attacks Simulated</span>
+            <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
+              <Skull className="w-4 h-4 text-yellow-800" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-charcoal font-sans">
+              {summary?.total_attacks ?? 0}
+            </span>
+            <p className="mt-1 text-xs text-charcoal-500">
+              {hasAttacks ? 'Across controlled attack scenarios' : 'No simulations run yet'}
+            </p>
+          </div>
+        </div>
+
+        {/* Metric 3: Threats Detected */}
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Threats Detected</span>
+            <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
+              <ShieldCheck className="w-4 h-4 text-yellow-800" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-charcoal font-sans">
+              {hasAttacks ? (summary?.total_threat_analyses ?? 0) : 0}
+            </span>
+            <p className="mt-1 text-xs text-charcoal-500">
+              {hasAttacks ? 'Deterministic threshold verification' : 'No threats detected yet'}
+            </p>
+          </div>
+        </div>
+
+        {/* Metric 4: Average Analysis Time */}
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Average Analysis Time</span>
+            <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
+              <Activity className="w-4 h-4 text-yellow-800" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-charcoal font-sans">
+              {hasThreatAnalyses ? `${summary?.average_detection_time_ms.toFixed(1)} ms` : '0 ms'}
+            </span>
+            <p className="mt-1 text-xs text-charcoal-500">
+              {hasThreatAnalyses ? 'Real-time statistical measurement' : 'No analyses performed yet'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* How it Works - Simple 5-Step Workflow */}
+      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-base font-bold text-charcoal">How It Works</h2>
+          <p className="text-xs text-charcoal-500 mt-0.5">A complete quantum security workflow in 5 simple steps</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
+              <span>STEP 1</span>
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            </div>
+            <div className="mt-2">
+              <h3 className="text-xs font-bold text-charcoal">Create Signature</h3>
+              <p className="text-[11px] text-charcoal-500 mt-0.5">Generate a secure quantum digital signature for your message.</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
+              <span>STEP 2</span>
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            </div>
+            <div className="mt-2">
+              <h3 className="text-xs font-bold text-charcoal">Verify Signature</h3>
+              <p className="text-[11px] text-charcoal-500 mt-0.5">Perform quantum measurement to confirm authenticity.</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
+              <span>STEP 3</span>
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            </div>
+            <div className="mt-2">
+              <h3 className="text-xs font-bold text-charcoal">Simulate Attack</h3>
+              <p className="text-[11px] text-charcoal-500 mt-0.5">Safely test forgery, replay, or channel eavesdropping.</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
+              <span>STEP 4</span>
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            </div>
+            <div className="mt-2">
+              <h3 className="text-xs font-bold text-charcoal">Detect Threats</h3>
+              <p className="text-[11px] text-charcoal-500 mt-0.5">Check measurement deviations against threshold boundaries.</p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
+              <span>STEP 5</span>
+              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            </div>
+            <div className="mt-2">
+              <h3 className="text-xs font-bold text-charcoal">View Analytics</h3>
+              <p className="text-[11px] text-charcoal-500 mt-0.5">Review system performance and telemetry insights.</p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Total Attacks Simulated */}
-        <div className="glass-panel p-5 rounded-xl border border-slate-800 flex items-center space-x-4">
-          <div className="p-3 rounded-xl bg-rose-950 border border-rose-800 text-rose-400">
-            <Flame className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-slate-400 text-xs font-mono uppercase tracking-wider block">Attacks Simulated</span>
-            <span className="text-2xl font-black text-white font-mono">{summary?.total_attacks ?? 0}</span>
-            <div className="text-[11px] text-slate-500 font-mono mt-0.5">Across 5 Threat Vectors</div>
-          </div>
+      {/* Quick Actions Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-base font-bold text-charcoal">Quick Actions</h2>
+          <p className="text-xs text-charcoal-500 mt-0.5">Explore protocols, simulate threats, and verify signatures</p>
         </div>
 
-        {/* Detection Rate */}
-        <div className="glass-panel p-5 rounded-xl border border-slate-800 flex items-center space-x-4">
-          <div className="p-3 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400">
-            <ShieldCheck className="w-6 h-6" />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Card 1: Quantum Lab */}
+          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
+                <Atom className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-charcoal text-sm">Quantum Lab</h3>
+              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
+                Explore quantum circuits and teleportation.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('quantum')}
+              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <span>Open Lab</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div>
-            <span className="text-slate-400 text-xs font-mono uppercase tracking-wider block">Threat Detection Rate</span>
-            <span className="text-2xl font-black text-emerald-400 font-mono">
-              {summary ? `${(summary.detection_rate * 100).toFixed(0)}%` : '100%'}
-            </span>
-            <div className="text-[11px] text-slate-500 font-mono mt-0.5">Deterministic 0% Miss Rate</div>
-          </div>
-        </div>
 
-        {/* Engine Latency */}
-        <div className="glass-panel p-5 rounded-xl border border-slate-800 flex items-center space-x-4">
-          <div className="p-3 rounded-xl bg-indigo-950 border border-indigo-800 text-indigo-400">
-            <Activity className="w-6 h-6" />
+          {/* Card 2: Digital Signatures */}
+          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-charcoal text-sm">Digital Signatures</h3>
+              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
+                Create and verify signatures.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('signatures')}
+              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <span>Create Signature</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div>
-            <span className="text-slate-400 text-xs font-mono uppercase tracking-wider block">Average Analysis Time</span>
-            <span className="text-2xl font-black text-white font-mono">
-              {summary ? `${summary.average_detection_time_ms.toFixed(1)}ms` : '11.8ms'}
-            </span>
-            <div className="text-[11px] text-slate-500 font-mono mt-0.5">Real-time Physical Evaluation</div>
+
+          {/* Card 3: Attack Simulator */}
+          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
+                <Skull className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-charcoal text-sm">Attack Simulator</h3>
+              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
+                Test controlled attack scenarios.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('attacks')}
+              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <span>Run Simulation</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Card 4: Threat Detection */}
+          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
+                <Activity className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-charcoal text-sm">Threat Detection</h3>
+              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
+                Analyze signatures for threats.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('detection')}
+              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <span>Analyze</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Card 5: Analytics */}
+          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-charcoal text-sm">Analytics</h3>
+              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
+                View security and performance results.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate && onNavigate('analytics')}
+              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <span>View Analytics</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Threat Vectors Breakdown Grid (5 Vectors) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-            <ShieldAlert className="w-4 h-4 text-rose-400" />
-            <span>Cyber Threat Vectors Monitored (Zero AI/ML)</span>
-          </h2>
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate('attacks')}
-              className="text-xs text-cyan-400 hover:underline font-mono flex items-center space-x-1"
-            >
-              <span>Open Attack Simulator</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
+      {/* Subsystem Readiness & Architecture */}
+      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-charcoal">Quantum Security Subsystems</h2>
+            <p className="text-xs text-charcoal-500">Real-time status of verification and simulation pipelines</p>
+          </div>
+          <div className="flex items-center space-x-2 text-xs text-success font-medium">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Ready</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          {health?.modules ? (
+            Object.entries(health.modules).map(([name, mod]: [string, any]) => (
+              <div key={name} className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-charcoal capitalize">{name.replace('_', ' ')}</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-charcoal-800 border border-yellow-200">
+                    {mod.status.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-[11px] text-charcoal-500 mt-2">{mod.details}</p>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-4 p-4 text-center text-charcoal-400">Loading subsystem telemetry...</div>
           )}
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 font-mono">
-          {/* 1. Forgery */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="p-2 rounded-lg bg-rose-950 border border-rose-800 text-rose-400">
-                <Skull className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-bold text-white">{summary?.forgery_attempts ?? 0}</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Signature Forgery</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Message hash tampering & basis mismatch</p>
-            </div>
-          </div>
-
-          {/* 2. Impersonation */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="p-2 rounded-lg bg-amber-950 border border-amber-800 text-amber-400">
-                <UserX className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-bold text-white">{summary?.impersonation_attempts ?? 0}</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Impersonation</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Signer spoofing & asymmetric parity collapse</p>
-            </div>
-          </div>
-
-          {/* 3. Replay */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="p-2 rounded-lg bg-orange-950 border border-orange-800 text-orange-400">
-                <History className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-bold text-white">{summary?.replay_attacks ?? 0}</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Replay Attack</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Stale session nonce & timestamp drift</p>
-            </div>
-          </div>
-
-          {/* 4. Channel Noise */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="p-2 rounded-lg bg-purple-950 border border-purple-800 text-purple-400">
-                <Radio className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-bold text-white">{summary?.channel_manipulation_attacks ?? 0}</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Channel Noise</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Depolarizing noise & QBER spike (&gt; 15%)</p>
-            </div>
-          </div>
-
-          {/* 5. Unauthorized Verification */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="p-2 rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-400">
-                <Lock className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-bold text-white">{summary?.unauthorized_verification_attempts ?? 0}</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Unauthorized Access</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Rogue verifier probe & unallocated basis denial</p>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* System Subsystems Readiness + Quick Action Triggers */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Subsystems Readiness (6 Cols) */}
-        <div className="lg:col-span-6 glass-panel rounded-xl p-6 border border-slate-800 space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-            <Cpu className="w-4 h-4 text-cyan-400" />
-            <span>Quantum Security Subsystems Status</span>
-          </h2>
-
-          <div className="space-y-3 font-mono text-xs">
-            {health?.modules ? (
-              Object.entries(health.modules).map(([name, mod]: [string, any]) => (
-                <div key={name} className="flex items-center justify-between p-3 rounded-lg bg-slate-900/80 border border-slate-800">
-                  <div className="flex items-center space-x-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="font-bold text-slate-200 capitalize">{name.replace('_', ' ')}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-emerald-400 font-bold">{mod.status.toUpperCase()}</span>
-                    <span className="text-slate-500 text-[10px] block">{mod.details}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-4 rounded bg-slate-900 text-slate-400 text-center">Loading subsystem telemetry...</div>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions (6 Cols) */}
-        <div className="lg:col-span-6 glass-panel rounded-xl p-6 border border-slate-800 flex flex-col justify-between space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-2 mb-3">
-              <Zap className="w-4 h-4 text-cyan-400" />
-              <span>Interactive Quick Actions</span>
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
-              <button
-                onClick={() => onNavigate && onNavigate('signatures')}
-                className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-left transition-all group"
-              >
-                <div className="flex items-center justify-between text-cyan-400 mb-1">
-                  <KeyRound className="w-4 h-4" />
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className="font-bold text-white">Sign Quantum Message</div>
-                <div className="text-[11px] text-slate-400 font-sans mt-0.5">Teleport EPR quantum signature tokens</div>
-              </button>
-
-              <button
-                onClick={() => onNavigate && onNavigate('attacks')}
-                className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500 text-left transition-all group"
-              >
-                <div className="flex items-center justify-between text-rose-400 mb-1">
-                  <Flame className="w-4 h-4" />
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className="font-bold text-white">Launch Cyber Attack</div>
-                <div className="text-[11px] text-slate-400 font-sans mt-0.5">Simulate 5 quantum threat vectors</div>
-              </button>
-
-              <button
-                onClick={() => onNavigate && onNavigate('detection')}
-                className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500 text-left transition-all group"
-              >
-                <div className="flex items-center justify-between text-cyan-400 mb-1">
-                  <Activity className="w-4 h-4" />
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className="font-bold text-white">Threat Detection Engine</div>
-                <div className="text-[11px] text-slate-400 font-sans mt-0.5">Deterministic D_TV & QBER invariant check</div>
-              </button>
-
-              <button
-                onClick={() => onNavigate && onNavigate('analytics')}
-                className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 text-left transition-all group"
-              >
-                <div className="flex items-center justify-between text-indigo-400 mb-1">
-                  <FileCheck className="w-4 h-4" />
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className="font-bold text-white">Security Analytics</div>
-                <div className="text-[11px] text-slate-400 font-sans mt-0.5">Charts, distributions & accuracy metrics</div>
-              </button>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-400">
-            <span className="text-cyan-400 font-semibold block mb-1">Live Backend Integration:</span>
-            <span>All stats queried dynamically from SQLite (<code className="text-slate-200">quantum_qds.db</code>).</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Live Recent Security Events Feed */}
-      <div className="space-y-3">
+      {/* Recent Activity Feed */}
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
-            <Activity className="w-4 h-4 text-cyan-400" />
-            <span>Recent Security Event Stream</span>
-          </h2>
-          {onNavigate && (
+          <div>
+            <h2 className="text-base font-bold text-charcoal">Recent Activity</h2>
+            <p className="text-xs text-charcoal-500">Audit trail of quantum signatures and security verifications</p>
+          </div>
+          {hasEvents && onNavigate && (
             <button
               onClick={() => onNavigate('history')}
-              className="text-xs text-cyan-400 hover:underline font-mono flex items-center space-x-1"
+              className="text-xs font-semibold text-charcoal hover:text-yellow-700 flex items-center space-x-1"
             >
-              <span>View Full Event History ({summary?.recent_events?.length ?? 0})</span>
-              <ArrowRight className="w-3 h-3" />
+              <span>View Full History</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        {summary?.recent_events && summary.recent_events.length > 0 ? (
-          <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden">
+        {hasEvents ? (
+          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-surface text-charcoal-500 uppercase tracking-wider font-semibold border-b border-[#EAEAEA]">
                   <tr>
                     <th className="py-3 px-4">Timestamp</th>
                     <th className="py-3 px-4">Event Type</th>
@@ -377,29 +431,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <th className="py-3 px-4">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {summary.recent_events.slice(0, 6).map((evt) => (
-                    <tr key={evt.id} className="hover:bg-slate-900/40">
-                      <td className="py-3 px-4 text-slate-400">
+                <tbody className="divide-y divide-[#EAEAEA]">
+                  {summary!.recent_events!.slice(0, 6).map((evt) => (
+                    <tr key={evt.id} className="hover:bg-yellow-50/50 transition-colors">
+                      <td className="py-3 px-4 text-charcoal-500 font-mono text-[11px]">
                         {new Date(evt.timestamp).toLocaleTimeString()}
                       </td>
-                      <td className="py-3 px-4 font-bold text-cyan-300">{evt.event_type}</td>
-                      <td className="py-3 px-4 text-slate-300">{evt.signer_or_actor}</td>
-                      <td className="py-3 px-4 text-slate-400 truncate max-w-xs">{evt.session_or_target}</td>
+                      <td className="py-3 px-4 font-semibold text-charcoal">{evt.event_type}</td>
+                      <td className="py-3 px-4 text-charcoal-600 font-mono">{evt.signer_or_actor}</td>
+                      <td className="py-3 px-4 text-charcoal-500 font-mono truncate max-w-xs">{evt.session_or_target}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${
+                          className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
                             evt.threat_level === 'CRITICAL' || evt.threat_level === 'HIGH'
-                              ? 'bg-rose-950 border-rose-800 text-rose-400'
+                              ? 'bg-red-50 border-red-200 text-danger'
                               : evt.threat_level === 'MEDIUM'
-                              ? 'bg-amber-950 border-amber-800 text-amber-400'
-                              : 'bg-emerald-950 border-emerald-800 text-emerald-400'
+                              ? 'bg-amber-50 border-amber-200 text-warning'
+                              : 'bg-green-50 border-green-200 text-success'
                           }`}
                         >
                           {evt.threat_level}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-200 font-bold">{evt.result_status}</td>
+                      <td className="py-3 px-4 text-charcoal font-medium">{evt.result_status}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -407,8 +461,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </div>
         ) : (
-          <div className="glass-panel rounded-xl p-6 text-center border border-slate-800 text-xs font-mono text-slate-400">
-            No events recorded yet. Start by creating a signature or running an attack simulation.
+          <div className="bg-white rounded-2xl border border-[#EAEAEA] p-10 text-center shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-yellow-100 text-charcoal flex items-center justify-center mx-auto mb-3">
+              <Clock className="w-6 h-6 text-yellow-800" />
+            </div>
+            <h3 className="font-bold text-charcoal text-sm">No recent activity</h3>
+            <p className="text-xs text-charcoal-500 max-w-md mx-auto mt-1">
+              Your signatures, simulations and security events will appear here.
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setDemoOpen(true)}
+                className="px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs transition-colors inline-flex items-center space-x-1.5 shadow-xs"
+              >
+                <Play className="w-3.5 h-3.5 fill-charcoal" />
+                <span>Run Your First Demo</span>
+              </button>
+              <button
+                onClick={() => onNavigate && onNavigate('signatures')}
+                className="px-4 py-2 rounded-xl bg-surface hover:bg-yellow-50 text-charcoal font-semibold text-xs border border-[#EAEAEA] transition-colors"
+              >
+                Create Signature
+              </button>
+            </div>
           </div>
         )}
       </div>

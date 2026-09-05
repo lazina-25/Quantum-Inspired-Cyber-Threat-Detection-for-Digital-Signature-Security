@@ -10,11 +10,11 @@ class Settings(BaseSettings):
     """Application configuration settings."""
 
     # Project metadata
-    PROJECT_NAME: str = "Quantum-Inspired Threat Detection for QDS"
+    PROJECT_NAME: str = "Quantum QDS Platform"
     VERSION: str = "0.1.0"
     DESCRIPTION: str = (
         "Quantum-Inspired Cyber Threat Detection Framework for Teleportation-Based "
-        "Quantum Digital Signature (QDS) Protocols (SIH 2026)"
+        "Quantum Digital Signature (QDS) Protocols"
     )
     ENVIRONMENT: str = "development"
     DEBUG: bool = True

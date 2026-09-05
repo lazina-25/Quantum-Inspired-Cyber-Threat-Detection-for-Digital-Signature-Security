@@ -35,7 +35,7 @@ def get_health_status(db: Session = Depends(get_db)) -> HealthCheckResponse:
         ),
         "threat_detection_engine": SystemModuleStatus(
             status="standby",
-            description="Deterministic mathematical and statistical thresholding (Zero AI/ML)",
+            description="Deterministic mathematical and statistical thresholding",
             ready=True,
         ),
         "attack_simulation": SystemModuleStatus(

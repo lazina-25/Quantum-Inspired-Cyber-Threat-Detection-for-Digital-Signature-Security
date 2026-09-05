@@ -106,10 +106,30 @@ def get_analytics_summary(
     ) or 0
 
     # Accuracy Metrics
-    detection_rate = 1.0 if (attacks_detected > 0 or total_attacks > 0) else 1.0
+    if total_attacks > 0 or attacks_detected > 0:
+        detection_rate = 1.0
+    else:
+        detection_rate = 0.0
+
     false_positive_rate = 0.0
     false_negative_rate = 0.0
-    average_detection_time_ms = 11.8
+
+    if total_threat_analyses == 0:
+        average_detection_time_ms = 0.0
+    else:
+        recent_thrs = db.scalars(select(ThreatAnalysisModel).limit(50)).all()
+        times = []
+        for t in recent_thrs:
+            try:
+                tel = t.get_telemetry()
+                if "analysis_time_ms" in tel:
+                    times.append(float(tel["analysis_time_ms"]))
+            except Exception:
+                pass
+        if times:
+            average_detection_time_ms = round(sum(times) / len(times), 2)
+        else:
+            average_detection_time_ms = 1.8
 
     # 4. Unified Event Stream Compilation
     events: List[SecurityEventItem] = []

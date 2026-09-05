@@ -3,7 +3,7 @@ import { LucideIcon } from 'lucide-react';
 
 interface StatusCardProps {
   title: string;
-  value: string;
+  value: string | number;
   subtitle?: string;
   icon: LucideIcon;
   badgeText?: string;
@@ -19,27 +19,27 @@ export const StatusCard: React.FC<StatusCardProps> = ({
   badgeType = 'info',
 }) => {
   const badgeStyles = {
-    success: 'bg-emerald-950/70 border-emerald-800 text-emerald-400',
-    warning: 'bg-amber-950/70 border-amber-800 text-amber-400',
-    info: 'bg-cyan-950/70 border-cyan-800 text-cyan-400',
-    error: 'bg-rose-950/70 border-rose-800 text-rose-400',
+    success: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    warning: 'bg-amber-50 border-amber-200 text-amber-700',
+    info: 'bg-yellow-100 border-yellow-300 text-charcoal',
+    error: 'bg-red-50 border-red-200 text-red-700',
   };
 
   return (
-    <div className="glass-panel glass-panel-hover rounded-xl p-5 transition-all duration-300">
+    <div className="bg-white rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{title}</p>
-          <h3 className="text-xl font-bold text-white mt-1">{value}</h3>
-          {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+          <p className="text-xs font-bold uppercase tracking-wider text-secondary">{title}</p>
+          <h3 className="text-2xl font-extrabold text-charcoal mt-1">{value}</h3>
+          {subtitle && <p className="text-xs text-secondary mt-1">{subtitle}</p>}
         </div>
-        <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 text-cyan-400">
-          <Icon className="w-5 h-5" />
+        <div className="p-2.5 rounded-xl bg-yellow-100 border border-yellow-200 text-charcoal">
+          <Icon className="w-5 h-5 text-yellow-600" />
         </div>
       </div>
       {badgeText && (
-        <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between">
-          <span className={`text-[11px] px-2.5 py-0.5 rounded-md border font-mono ${badgeStyles[badgeType]}`}>
+        <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+          <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border font-mono ${badgeStyles[badgeType]}`}>
             {badgeText}
           </span>
         </div>

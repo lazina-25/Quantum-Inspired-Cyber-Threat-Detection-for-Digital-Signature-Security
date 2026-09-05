@@ -2,51 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .bg-surface {
+    background-color: #FAFAF8;
+  }
+  .border-surface {
+    border-color: #FAFAF8;
+  }
+  .text-surface {
+    color: #FAFAF8;
+  }
+}
+
 @layer base {
   body {
-    @apply bg-[#060a12] text-slate-100 font-sans;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(121, 40, 202, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
+    background-color: #FAFAF8;
+    color: #171717;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #FAFAF8;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
+  background: #D9D9D9;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #B0B0B0;
 }
 
-/* Glow and gradient utilities */
+/* Clean Card utilities */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(56, 189, 248, 0.12);
+  background: #FFFFFF;
+  border: 1px solid #EAEAEA;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+}
+
+.glass-panel-hover {
+  transition: all 0.2s ease-in-out;
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(56, 189, 248, 0.35);
-  box-shadow: 0 0 20px -5px rgba(14, 165, 233, 0.25);
+  border-color: #FFD84D;
+  box-shadow: 0 6px 16px -2px rgba(245, 196, 0, 0.12), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 }
 
-.text-gradient-cyan {
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.text-gradient-yellow {
+  color: #171717;
 }

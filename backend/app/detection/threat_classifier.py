@@ -5,6 +5,7 @@ verifiable physical invariants, statistical thresholds, and identity verificatio
 """
 
 import uuid
+import time
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
@@ -36,6 +37,7 @@ def classify_threat_scenario(
     attack_context_id: Optional[str] = None,
 ) -> ThreatDetectionVerdict:
     """Execute complete deterministic threat detection and classification."""
+    t0 = time.perf_counter()
     sig = db.get(SignatureModel, signature_id)
     if not sig:
         raise ValueError(f"Signature '{signature_id}' not found in database.")
@@ -219,7 +221,9 @@ def classify_threat_scenario(
 
     analysis_id = f"thr_ana_{uuid.uuid4().hex[:10]}"
 
+    elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
     telemetry = {
+        "analysis_time_ms": max(elapsed_ms, 0.1),
         "qber": qber,
         "total_variation_distance": tvd,
         "fidelity": fidelity,

@@ -7,8 +7,6 @@ import {
   Code2,
   BarChart3,
   Sliders,
-  Zap,
-  Info,
   CheckCircle2,
   GitBranch,
   Layers,
@@ -106,20 +104,20 @@ export const QuantumTeleportationPage: React.FC = () => {
 
   const runTeleportation = async (
     stateId: InputStateId = selectedState,
-    tVal: number = theta,
-    pVal: number = phi,
-    numShots: number = shots,
-    bVal: VerificationBasisId = basis
+    t: number = theta,
+    p: number = phi,
+    s: number = shots,
+    b: VerificationBasisId = basis
   ) => {
     setLoading(true);
     setError(null);
     try {
       const payload: TeleportationRequest = {
         input_state: stateId,
-        theta: stateId === 'custom' ? tVal : undefined,
-        phi: stateId === 'custom' ? pVal : undefined,
-        shots: numShots,
-        verification_basis: bVal,
+        theta: stateId === 'custom' ? t : undefined,
+        phi: stateId === 'custom' ? p : undefined,
+        shots: s,
+        verification_basis: b,
       };
       const resp = await simulateTeleportationApi(payload);
       setResult(resp.data);
@@ -141,71 +139,73 @@ export const QuantumTeleportationPage: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Prepare Bob's measurement chart data
-  const receiverChartData = result
-    ? ['0', '1'].map((b) => ({
-        outcome: `|${b}⟩`,
-        empirical: (result.receiver_probabilities[b] || 0) * 100,
-        expected: (result.expected_probabilities[b] || 0) * 100,
-        count: result.receiver_counts[b] || 0,
-      }))
+  // Prepare Bob measurement data for Recharts
+  const chartData = result
+    ? Object.keys(result.receiver_counts).map((bit) => {
+        const count = result.receiver_counts[bit] || 0;
+        const empirical = result.receiver_probabilities[bit] ? result.receiver_probabilities[bit] * 100 : 0;
+        const theoretical = result.expected_probabilities[bit]
+          ? result.expected_probabilities[bit] * 100
+          : 0;
+        return {
+          bit: `Outcome |${bit}⟩`,
+          empirical,
+          theoretical,
+          count,
+        };
+      })
     : [];
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl glass-panel p-6 sm:p-8 border border-cyan-500/20">
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-mono mb-3">
-              <Radio className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Part 3: Quantum Teleportation & Pauli Unitaries</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Quantum Teleportation & <span className="text-gradient-cyan">Pauli Frame Corrections</span>
-            </h1>
-            <p className="mt-2 text-slate-300 text-sm leading-relaxed">
-              Disassemble an arbitrary quantum state at Alice, transmit 2 classical Bell bits $(c_0, c_1)$, and reconstruct the exact quantum state at Bob using conditional Pauli operations ($I, X, Z, XZ$).
-            </p>
+    <div className="space-y-6">
+      {/* What It Does & Why It Matters Explainer */}
+      <div className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 text-charcoal font-bold text-xs uppercase tracking-wider">
+            <Radio className="w-4 h-4 text-yellow-600" />
+            <span>What It Does</span>
           </div>
+          <h2 className="text-base font-bold text-charcoal">Quantum State Teleportation Protocol</h2>
+          <p className="text-xs text-charcoal-500 leading-relaxed">
+            Transfers an unknown quantum state using quantum entanglement and classical communication. Alice measures her qubit together with one half of a Bell pair, transmits 2 classical bits to Bob, and Bob applies conditional quantum corrections to reconstruct the exact state.
+          </p>
+        </div>
 
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => runTeleportation()}
-              disabled={loading}
-              className="inline-flex items-center justify-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all disabled:opacity-50"
-            >
-              <Play className={`w-4 h-4 ${loading ? 'animate-spin' : 'fill-current'}`} />
-              <span>{loading ? 'Teleporting...' : 'Simulate Teleportation'}</span>
-            </button>
+        <div className="space-y-2 md:border-l md:border-[#EAEAEA] md:pl-6">
+          <div className="flex items-center space-x-2 text-charcoal font-bold text-xs uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-yellow-600" />
+            <span>Why It Matters</span>
           </div>
+          <h2 className="text-base font-bold text-charcoal">QDS Message Verification</h2>
+          <p className="text-xs text-charcoal-500 leading-relaxed">
+            In Quantum Digital Signatures, signature tokens are teleported without transmitting the physical state over an open fiber channel. Verifiers reconstruct tokens using quantum corrections, guaranteeing message integrity without vulnerability to forgery.
+          </p>
         </div>
       </div>
 
-      {/* Error alert */}
       {error && (
-        <div className="rounded-xl bg-rose-950/40 border border-rose-800/80 p-4 text-rose-200 flex items-start space-x-3 text-xs">
-          <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+        <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-danger flex items-start space-x-3 text-xs">
+          <ShieldAlert className="w-5 h-5 text-danger shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-rose-300">Teleportation Protocol Notice</p>
+            <p className="font-semibold">Teleportation Error</p>
             <p className="mt-0.5">{error}</p>
           </div>
         </div>
       )}
 
-      {/* Configuration Grid */}
+      {/* Controls: Input State Selection & Telemetry Settings */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Input State Cards (8 Cols) */}
+        {/* Left: Input State Selection (8 Cols) */}
         <div className="lg:col-span-8 space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <span>1. Select Input State |ψ⟩ to Teleport</span>
-          </h2>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-charcoal flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-yellow-600" />
+              <span>1. Choose Quantum State to Teleport (Alice's Qubit q0)</span>
+            </h3>
+            <span className="text-xs text-charcoal-500">Inputs & Parameters</span>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PRESET_STATES.map((state) => {
               const isSelected = selectedState === state.id;
               return (
@@ -214,27 +214,23 @@ export const QuantumTeleportationPage: React.FC = () => {
                   onClick={() => {
                     setSelectedState(state.id);
                     if (state.id !== 'custom') {
-                      setTheta(state.theta);
-                      setPhi(state.phi);
+                      runTeleportation(state.id, state.theta, state.phi, shots, basis);
                     }
-                    runTeleportation(state.id, state.theta, state.phi, shots, basis);
                   }}
-                  className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col justify-between ${
+                  className={`text-left p-4 rounded-2xl border transition-all ${
                     isSelected
-                      ? 'bg-cyan-950/40 border-cyan-500 shadow-lg shadow-cyan-500/10'
-                      : 'glass-panel border-slate-800 hover:border-slate-700'
+                      ? 'bg-yellow-50 border-yellow-400 shadow-xs'
+                      : 'bg-white border-[#EAEAEA] hover:border-yellow-300'
                   }`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-white font-mono">{state.symbol}</span>
-                      <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-cyan-300 font-mono">
-                        {state.name}
-                      </span>
-                    </div>
-                    <p className="text-xs font-mono text-cyan-400 mt-1 font-semibold">{state.formula}</p>
-                    <p className="text-xs text-slate-400 mt-2">{state.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-charcoal font-mono">{state.symbol}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-lg bg-surface text-charcoal font-bold font-mono border border-[#EAEAEA]">
+                      {state.name}
+                    </span>
                   </div>
+                  <p className="text-xs font-mono text-charcoal-700 mt-1 font-semibold">{state.formula}</p>
+                  <p className="text-xs text-charcoal-500 mt-2 line-clamp-2">{state.description}</p>
                 </button>
               );
             })}
@@ -242,21 +238,20 @@ export const QuantumTeleportationPage: React.FC = () => {
 
           {/* Custom Bloch Sphere Sliders */}
           {selectedState === 'custom' && (
-            <div className="glass-panel rounded-xl p-5 border border-cyan-800/40 space-y-4 bg-cyan-950/10">
+            <div className="p-5 rounded-2xl bg-white border border-[#EAEAEA] shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-cyan-300 font-mono flex items-center space-x-2">
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Bloch Sphere Coordinates (θ, φ)</span>
+                <span className="text-xs font-bold text-charcoal uppercase tracking-wider">
+                  Bloch Sphere Coordinates
                 </span>
-                <span className="text-xs font-mono text-slate-400">
+                <span className="text-xs font-mono text-charcoal-500">
                   θ = {(theta / Math.PI).toFixed(2)}π rad, φ = {(phi / Math.PI).toFixed(2)}π rad
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
                 <div>
-                  <div className="flex justify-between text-slate-300 mb-1">
+                  <div className="flex justify-between text-charcoal-600 mb-1">
                     <span>Polar Angle (θ):</span>
-                    <span className="text-cyan-400">{theta.toFixed(3)} rad</span>
+                    <span className="text-charcoal font-bold">{theta.toFixed(3)} rad</span>
                   </div>
                   <input
                     type="range"
@@ -265,18 +260,18 @@ export const QuantumTeleportationPage: React.FC = () => {
                     step="0.05"
                     value={theta}
                     onChange={(e) => setTheta(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-yellow-500"
                   />
-                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-charcoal-400 mt-1">
                     <span>0 (|0⟩)</span>
                     <span>π/2 (Equator)</span>
                     <span>π (|1⟩)</span>
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between text-slate-300 mb-1">
+                  <div className="flex justify-between text-charcoal-600 mb-1">
                     <span>Azimuthal Angle (φ):</span>
-                    <span className="text-cyan-400">{phi.toFixed(3)} rad</span>
+                    <span className="text-charcoal font-bold">{phi.toFixed(3)} rad</span>
                   </div>
                   <input
                     type="range"
@@ -285,9 +280,9 @@ export const QuantumTeleportationPage: React.FC = () => {
                     step="0.05"
                     value={phi}
                     onChange={(e) => setPhi(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-yellow-500"
                   />
-                  <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                  <div className="flex justify-between text-[10px] text-charcoal-400 mt-1">
                     <span>0 (X-axis)</span>
                     <span>π/2 (Y-axis)</span>
                     <span>2π</span>
@@ -299,18 +294,17 @@ export const QuantumTeleportationPage: React.FC = () => {
         </div>
 
         {/* Right: Shots & Basis Settings (4 Cols) */}
-        <div className="lg:col-span-4 glass-panel rounded-xl p-5 border border-slate-800 flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-[#EAEAEA] shadow-sm flex flex-col justify-between">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2 mb-4">
-              <Sliders className="w-4 h-4 text-cyan-400" />
-              <span>2. Telemetry Parameters</span>
-            </h2>
+            <h3 className="text-sm font-bold text-charcoal flex items-center space-x-2 mb-4">
+              <Sliders className="w-4 h-4 text-yellow-600" />
+              <span>2. Simulation Settings</span>
+            </h3>
 
             <div className="space-y-4">
-              {/* Shot Count */}
               <div>
-                <label className="text-xs text-slate-300 block mb-2 font-mono">
-                  Measurement Shots: <span className="text-cyan-400 font-bold">{shots.toLocaleString()}</span>
+                <label className="text-xs text-charcoal-600 block mb-2 font-medium">
+                  Measurement Shots: <span className="text-charcoal font-bold font-mono">{shots.toLocaleString()}</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {SHOT_PRESETS.map((preset) => (
@@ -320,10 +314,10 @@ export const QuantumTeleportationPage: React.FC = () => {
                         setShots(preset);
                         runTeleportation(selectedState, theta, phi, preset, basis);
                       }}
-                      className={`py-1.5 px-2 text-xs font-mono rounded-lg border transition-all ${
+                      className={`py-1.5 px-2 text-xs font-mono rounded-xl border transition-all ${
                         shots === preset
-                          ? 'bg-cyan-950 border-cyan-500 text-cyan-300'
-                          : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                          ? 'bg-yellow-400 text-charcoal font-bold border-yellow-400 shadow-xs'
+                          : 'bg-surface border-[#EAEAEA] text-charcoal-600 hover:bg-yellow-50'
                       }`}
                     >
                       {preset}
@@ -332,9 +326,8 @@ export const QuantumTeleportationPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Basis Selection */}
               <div>
-                <label className="text-xs text-slate-300 block mb-2 font-mono">
+                <label className="text-xs text-charcoal-600 block mb-2 font-medium">
                   Verification Basis:
                 </label>
                 <div className="grid grid-cols-3 gap-2 text-xs font-mono">
@@ -343,10 +336,10 @@ export const QuantumTeleportationPage: React.FC = () => {
                       setBasis('auto');
                       runTeleportation(selectedState, theta, phi, shots, 'auto');
                     }}
-                    className={`py-1.5 px-2 rounded-lg border transition-all ${
+                    className={`py-1.5 px-2 rounded-xl border transition-all ${
                       basis === 'auto'
-                        ? 'bg-cyan-950 border-cyan-500 text-cyan-300'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                        ? 'bg-yellow-400 text-charcoal font-bold border-yellow-400 shadow-xs'
+                        : 'bg-surface border-[#EAEAEA] text-charcoal-600 hover:bg-yellow-50'
                     }`}
                   >
                     Auto
@@ -356,10 +349,10 @@ export const QuantumTeleportationPage: React.FC = () => {
                       setBasis('z_basis');
                       runTeleportation(selectedState, theta, phi, shots, 'z_basis');
                     }}
-                    className={`py-1.5 px-2 rounded-lg border transition-all ${
+                    className={`py-1.5 px-2 rounded-xl border transition-all ${
                       basis === 'z_basis'
-                        ? 'bg-cyan-950 border-cyan-500 text-cyan-300'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                        ? 'bg-yellow-400 text-charcoal font-bold border-yellow-400 shadow-xs'
+                        : 'bg-surface border-[#EAEAEA] text-charcoal-600 hover:bg-yellow-50'
                     }`}
                   >
                     Z-Basis
@@ -369,10 +362,10 @@ export const QuantumTeleportationPage: React.FC = () => {
                       setBasis('x_basis');
                       runTeleportation(selectedState, theta, phi, shots, 'x_basis');
                     }}
-                    className={`py-1.5 px-2 rounded-lg border transition-all ${
+                    className={`py-1.5 px-2 rounded-xl border transition-all ${
                       basis === 'x_basis'
-                        ? 'bg-cyan-950 border-cyan-500 text-cyan-300'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                        ? 'bg-yellow-400 text-charcoal font-bold border-yellow-400 shadow-xs'
+                        : 'bg-surface border-[#EAEAEA] text-charcoal-600 hover:bg-yellow-50'
                     }`}
                   >
                     X-Basis
@@ -382,261 +375,178 @@ export const QuantumTeleportationPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800/80 text-xs text-slate-400 font-mono">
-            <div className="flex items-center justify-between">
-              <span>Protocol:</span>
-              <span className="text-cyan-300">Bennett et al. Teleportation</span>
-            </div>
+          <div className="pt-4 border-t border-[#EAEAEA] mt-6">
+            <button
+              onClick={() => runTeleportation(selectedState, theta, phi, shots, basis)}
+              disabled={loading}
+              className="w-full py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs transition-colors flex items-center justify-center space-x-2 shadow-xs disabled:opacity-50"
+            >
+              <Play className={`w-3.5 h-3.5 fill-charcoal ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Executing Teleportation...' : 'Run Simulation'}</span>
+            </button>
+
             {latencyMs !== null && (
-              <div className="flex items-center justify-between mt-1">
-                <span>Execution Time:</span>
-                <span className="text-emerald-400">{latencyMs} ms</span>
+              <div className="flex items-center justify-between mt-3 text-[11px] text-charcoal-400 font-mono">
+                <span>Latency:</span>
+                <span className="text-success font-semibold">{latencyMs} ms</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Protocol Telemetry Flow: 4 Pipeline Stages */}
+      {/* Protocol Telemetry Pipeline Stages */}
       {result && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-2">
-            <GitBranch className="w-4 h-4 text-cyan-400" />
-            <span>Teleportation Execution Pipeline & Pauli Frame Telemetry</span>
+          <h3 className="text-sm font-bold text-charcoal flex items-center space-x-2">
+            <GitBranch className="w-4 h-4 text-yellow-600" />
+            <span>Teleportation Execution Pipeline & Quantum Corrections</span>
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
             {/* Stage 1 */}
-            <div className="glass-panel rounded-xl p-4 border border-slate-800">
-              <span className="text-[10px] text-cyan-400 uppercase tracking-wider block mb-1">Stage 1: Signer (Alice)</span>
-              <h4 className="text-sm font-bold text-white">State Preparation</h4>
-              <p className="text-xs text-cyan-300 mt-1">{result.symbol} = {result.formula}</p>
-              <div className="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
+            <div className="bg-white rounded-2xl p-4 border border-[#EAEAEA] shadow-sm">
+              <span className="text-[10px] text-charcoal font-bold uppercase tracking-wider block mb-1">Stage 1: Signer (Alice)</span>
+              <h4 className="text-sm font-bold text-charcoal">State Preparation</h4>
+              <p className="text-xs text-charcoal-700 mt-1">{result.symbol} = {result.formula}</p>
+              <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-[11px] text-charcoal-500">
                 <span>Target: Qubit q0</span>
               </div>
             </div>
 
             {/* Stage 2 */}
-            <div className="glass-panel rounded-xl p-4 border border-slate-800">
-              <span className="text-[10px] text-cyan-400 uppercase tracking-wider block mb-1">Stage 2: Quantum Channel</span>
-              <h4 className="text-sm font-bold text-white">EPR Bell Pair</h4>
-              <p className="text-xs text-slate-300 mt-1">|Φ+⟩ = (|00⟩ + |11⟩)/√2</p>
-              <div className="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-                <span>Entanglement: q1 ↔ q2</span>
+            <div className="bg-white rounded-2xl p-4 border border-[#EAEAEA] shadow-sm">
+              <span className="text-[10px] text-charcoal font-bold uppercase tracking-wider block mb-1">Stage 2: Quantum Channel</span>
+              <h4 className="text-sm font-bold text-charcoal">EPR Bell Pair</h4>
+              <p className="text-xs text-charcoal-600 mt-1">|Φ+⟩ = (|00⟩ + |11⟩)/√2</p>
+              <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-[11px] text-charcoal-500">
+                <span>Entanglement: q1 &harr; q2</span>
               </div>
             </div>
 
             {/* Stage 3 */}
-            <div className="glass-panel rounded-xl p-4 border border-slate-800">
-              <span className="text-[10px] text-cyan-400 uppercase tracking-wider block mb-1">Stage 3: Alice BSM</span>
-              <h4 className="text-sm font-bold text-white">Bell Measurement</h4>
-              <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-300 mt-1">
+            <div className="bg-white rounded-2xl p-4 border border-[#EAEAEA] shadow-sm">
+              <span className="text-[10px] text-charcoal font-bold uppercase tracking-wider block mb-1">Stage 3: Measurement</span>
+              <h4 className="text-sm font-bold text-charcoal">Bell Measurement</h4>
+              <div className="grid grid-cols-2 gap-1 text-[11px] text-charcoal-600 mt-1">
                 <span>00: {result.bell_measurement_counts['00'] || 0}</span>
                 <span>01: {result.bell_measurement_counts['01'] || 0}</span>
                 <span>10: {result.bell_measurement_counts['10'] || 0}</span>
                 <span>11: {result.bell_measurement_counts['11'] || 0}</span>
               </div>
-              <div className="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400">
+              <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-[11px] text-charcoal-500">
                 <span>Classical bits: (c0, c1)</span>
               </div>
             </div>
 
             {/* Stage 4 */}
-            <div className="glass-panel rounded-xl p-4 border border-emerald-800/60 bg-emerald-950/10">
-              <span className="text-[10px] text-emerald-400 uppercase tracking-wider block mb-1">Stage 4: Verifier (Bob)</span>
+            <div className="bg-white rounded-2xl p-4 border border-green-200 shadow-sm">
+              <span className="text-[10px] text-success font-bold uppercase tracking-wider block mb-1">Stage 4: Verifier (Bob)</span>
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-white">Reconstruction</h4>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-sm font-bold text-charcoal">Reconstruction</h4>
+                <CheckCircle2 className="w-4 h-4 text-success" />
               </div>
-              <p className="text-xs text-emerald-400 mt-1 font-bold">Fidelity: {(result.fidelity * 100).toFixed(2)}%</p>
-              <div className="mt-3 pt-2 border-t border-emerald-900/60 text-[11px] text-emerald-300/80">
-                <span>State Reconstructed on q2</span>
+              <p className="text-xs text-success mt-1 font-bold">Fidelity: {(result.fidelity * 100).toFixed(1)}%</p>
+              <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-[11px] text-charcoal-500">
+                <span>Target: Qubit q2 Reconstructed</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Main Analysis: Circuit & Charts */}
-      {result && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Circuit Visualizer (5 Cols) */}
-          <div className="lg:col-span-5 glass-panel rounded-xl p-5 border border-slate-800 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-                <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300">
-                  <Code2 className="w-4 h-4" />
-                  <span>Teleportation Circuit</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="flex rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-mono">
+          {/* Results: Circuit & Histogram */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Circuit Box (5 Cols) */}
+            <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-[#EAEAEA] shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-3">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-charcoal">
+                    <Code2 className="w-4 h-4 text-yellow-600" />
+                    <span>3-Qubit Teleportation Circuit</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex rounded-lg bg-surface p-0.5 text-xs font-mono border border-[#EAEAEA]">
+                      <button
+                        onClick={() => setViewMode('text')}
+                        className={`px-2 py-0.5 rounded ${viewMode === 'text' ? 'bg-yellow-400 text-charcoal font-bold shadow-xs' : 'text-charcoal-500'}`}
+                      >
+                        ASCII
+                      </button>
+                      <button
+                        onClick={() => setViewMode('qasm')}
+                        className={`px-2 py-0.5 rounded ${viewMode === 'qasm' ? 'bg-yellow-400 text-charcoal font-bold shadow-xs' : 'text-charcoal-500'}`}
+                      >
+                        QASM3
+                      </button>
+                    </div>
                     <button
-                      onClick={() => setViewMode('text')}
-                      className={`px-2 py-0.5 rounded ${viewMode === 'text' ? 'bg-cyan-950 text-cyan-300' : 'text-slate-400'}`}
+                      onClick={() => handleCopy(viewMode === 'text' ? result.circuit_text : result.circuit_qasm)}
+                      className="p-1.5 rounded-lg border border-[#EAEAEA] hover:bg-yellow-50 text-charcoal transition-colors"
+                      title="Copy circuit to clipboard"
                     >
-                      ASCII
-                    </button>
-                    <button
-                      onClick={() => setViewMode('qasm')}
-                      className={`px-2 py-0.5 rounded ${viewMode === 'qasm' ? 'bg-cyan-950 text-cyan-300' : 'text-slate-400'}`}
-                    >
-                      QASM3
+                      {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  <button
-                    onClick={() => handleCopy(viewMode === 'text' ? result.circuit_text : result.circuit_qasm)}
-                    className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500 text-slate-400 hover:text-cyan-300 transition-all"
-                    title="Copy to clipboard"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
+                </div>
+
+                <div className="bg-charcoal p-4 rounded-xl font-mono text-xs text-yellow-300 border border-charcoal-800 overflow-x-auto min-h-[160px] flex items-center">
+                  <pre className="leading-tight">
+                    {viewMode === 'text' ? result.circuit_text : result.circuit_qasm}
+                  </pre>
                 </div>
               </div>
 
-              {/* Monospace Circuit Box */}
-              <div className="bg-[#050811] p-4 rounded-xl font-mono text-xs text-cyan-300 border border-slate-900 overflow-x-auto min-h-[180px] flex items-center">
-                <pre className="leading-tight">
-                  {viewMode === 'text' ? result.circuit_text : result.circuit_qasm}
-                </pre>
+              <div className="mt-4 pt-4 border-t border-[#EAEAEA] grid grid-cols-2 gap-2 text-center text-xs font-mono">
+                <div className="p-2 rounded-xl bg-surface border border-[#EAEAEA]">
+                  <span className="text-charcoal-400 block text-[10px] font-sans">Qubits</span>
+                  <span className="text-charcoal font-bold">3 Qubits (q0, q1, q2)</span>
+                </div>
+                <div className="p-2 rounded-xl bg-surface border border-[#EAEAEA]">
+                  <span className="text-charcoal-400 block text-[10px] font-sans">Protocol</span>
+                  <span className="text-charcoal font-bold">Bennett Teleportation</span>
+                </div>
               </div>
             </div>
 
-            {/* Circuit Register Legend */}
-            <div className="mt-4 pt-3 border-t border-slate-800 text-xs font-mono text-slate-400 space-y-1">
-              <div><strong className="text-cyan-300">q[0]:</strong> Alice's input state (|ψ⟩)</div>
-              <div><strong className="text-cyan-300">q[1]:</strong> Alice's entangled EPR half</div>
-              <div><strong className="text-cyan-300">q[2]:</strong> Bob's target qubit (teleported output)</div>
-            </div>
-          </div>
-
-          {/* Bob's Measurement Distribution & Pauli Corrections (7 Cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Receiver Measurement Chart */}
-            <div className="glass-panel rounded-xl p-5 border border-slate-800">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>Bob's Reconstructed Qubit Measurement ({result.verification_basis.toUpperCase()})</span>
+            {/* Reconstructed Qubit Histogram (7 Cols) */}
+            <div className="lg:col-span-7 bg-white rounded-2xl p-5 border border-[#EAEAEA] shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-4">
+                <div className="flex items-center space-x-2 text-xs font-bold text-charcoal">
+                  <BarChart3 className="w-4 h-4 text-yellow-600" />
+                  <span>Bob's Reconstructed Qubit (q2) Probability Distribution</span>
                 </div>
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded">
-                  Fidelity F = {result.fidelity.toFixed(4)}
+                <span className="text-xs text-charcoal-500 font-mono">
+                  Total Shots: <strong className="text-charcoal">{result.shots.toLocaleString()}</strong>
                 </span>
               </div>
 
-              <div className="h-48 w-full">
+              <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={receiverChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                    <XAxis dataKey="outcome" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }} />
-                    <YAxis stroke="#94a3b8" domain={[0, 100]} unit="%" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
+                    <XAxis dataKey="bit" stroke="#6B6B6B" tick={{ fill: '#6B6B6B', fontSize: 12, fontFamily: 'monospace' }} />
+                    <YAxis stroke="#6B6B6B" domain={[0, 100]} unit="%" tick={{ fill: '#6B6B6B', fontSize: 12 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0f172a',
-                        borderColor: '#38bdf8',
-                        borderRadius: '8px',
-                        color: '#fff',
+                        backgroundColor: '#ffffff',
+                        borderColor: '#EAEAEA',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                        color: '#171717',
                         fontFamily: 'monospace',
                         fontSize: '12px',
                       }}
                       formatter={(val: number) => [`${val.toFixed(2)}%`]}
                     />
                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                    <Bar dataKey="empirical" name="Empirical Measured (%)" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expected" name="Theoretical Input Prob (%)" fill="#818cf8" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="empirical" name="Empirical Outcome (%)" fill="#F5C400" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="theoretical" name="Ideal Theoretical Expectation (%)" fill="#171717" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
-
-            {/* Pauli Unitary Corrections Breakdown */}
-            <div className="glass-panel rounded-xl p-5 border border-slate-800">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-                <div className="flex items-center space-x-2 text-xs font-mono text-cyan-300">
-                  <Zap className="w-4 h-4" />
-                  <span>Conditional Pauli Corrections Distribution</span>
-                </div>
-                <span className="text-xs font-mono text-slate-400">
-                  Branches: (c0, c1) → {result.shots} Total Shots
-                </span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 text-center text-xs font-mono">
-                {Object.entries(result.pauli_corrections_applied).map(([op, cnt]) => {
-                  const bsmCode = op === 'I' ? '00' : op === 'X' ? '01' : op === 'Z' ? '10' : '11';
-                  return (
-                    <div key={op} className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
-                      <span className="text-[10px] text-slate-500 block">BSM: {bsmCode}</span>
-                      <span className="text-cyan-400 font-bold text-sm block mt-0.5">Pauli {op}</span>
-                      <span className="text-white text-xs block mt-1">{cnt} shots</span>
-                      <span className="text-[10px] text-slate-400">{((cnt / result.shots) * 100).toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
       )}
-
-      {/* State Amplitude Comparison Table */}
-      {result && (
-        <div className="glass-panel rounded-xl p-6 border border-slate-800">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span>State Amplitude Verification: Alice's Input vs Bob's Teleported State</span>
-          </h3>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-900/80 text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Computational Basis</th>
-                  <th className="py-3 px-4">Alice Input Amplitude (α_in)</th>
-                  <th className="py-3 px-4">Bob Reconstructed Amplitude (α_out)</th>
-                  <th className="py-3 px-4">Probability |α|²</th>
-                  <th className="py-3 px-4">State Match</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {result.input_amplitudes.map((amp, idx) => {
-                  const bobAmp = result.reconstructed_amplitudes[idx];
-                  return (
-                    <tr key={amp.basis} className="bg-cyan-950/10 text-slate-200">
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-cyan-300">
-                          {amp.basis}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-cyan-300 font-bold">{amp.formatted}</td>
-                      <td className="py-3 px-4 text-emerald-400 font-bold">{bobAmp.formatted}</td>
-                      <td className="py-3 px-4">{(amp.probability * 100).toFixed(2)}%</td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center space-x-1 text-emerald-400">
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Exact Match</span>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Educational & Architectural Connection to QDS */}
-      <div className="glass-panel rounded-xl p-6 border border-cyan-800/30 bg-gradient-to-br from-cyan-950/20 to-transparent">
-        <div className="flex items-start space-x-3">
-          <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-300 space-y-1">
-            <h4 className="font-bold text-white text-sm">How Teleportation Secures Quantum Digital Signatures (QDS)</h4>
-            <p className="leading-relaxed">
-              In teleportation-based QDS protocols, the Signer (Alice) signs a message by teleporting secret quantum signature states |ψ_k⟩ to the Verifier (Bob). Because the quantum no-cloning theorem prevents any eavesdropper (Eve) from duplicating unknown quantum states without introducing detectable perturbation, and because Bob's correct reconstruction depends strictly on authenticated classical Bell bits (c0, c1), any tampering, impersonation, forgery, or replay attempt will cause detectable fidelity loss (F &lt; F_threshold) or Quantum Bit Error Rate (QBER) spikes.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -14,7 +14,7 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#060a12] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-surface text-charcoal font-sans">
       <Navbar
         status={health?.status || 'offline'}
         latencyMs={latencyMs}
@@ -23,7 +23,7 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
         {activeTab === 'quantum' && <QuantumLabPage />}
         {activeTab === 'signatures' && <QuantumSignaturePage />}
@@ -32,10 +32,10 @@ export const App: React.FC = () => {
         {activeTab === 'analytics' && <AnalyticsPage />}
         {activeTab === 'history' && <EventHistoryPage />}
       </main>
-      <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 font-mono">
+      <footer className="border-t border-[#EAEAEA] bg-white py-6 text-center text-xs text-charcoal-500 font-sans">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>Quantum-Inspired Cyber Threat Detection for Digital Signature Security (SIH 2026)</p>
-          <p className="text-cyan-500/80">Qiskit 2.5 &bull; Teleportation Protocol &bull; Zero AI/ML Engine</p>
+          <p className="font-medium text-charcoal-700">Quantum QDS &mdash; Quantum Digital Signature & Threat Detection Platform</p>
+          <p className="text-charcoal-400">Physics-Based Verification &bull; Qiskit Quantum Simulation Engine</p>
         </div>
       </footer>
     </div>
