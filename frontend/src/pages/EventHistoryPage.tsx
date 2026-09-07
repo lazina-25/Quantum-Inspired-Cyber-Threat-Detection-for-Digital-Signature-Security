@@ -61,31 +61,33 @@ export const EventHistoryPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-2xl border border-border shadow-sm">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-300 text-charcoal text-xs font-semibold mb-2">
-            <History className="w-3.5 h-3.5 text-yellow-600" />
-            <span>Security Audit Trail</span>
+      <div className="page-header-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="page-header-badge">
+              <History className="w-3.5 h-3.5 text-yellow-800" />
+              <span>Security Audit Trail</span>
+            </div>
+            <h1 className="page-title">Event History</h1>
+            <p className="page-description">
+              Real-time audit log of signatures, projective measurements, attack scenarios, and verification verdicts.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-charcoal">Event History</h1>
-          <p className="text-secondary text-xs mt-1">
-            Real-time audit log of signatures, projective measurements, attack scenarios, and verification verdicts.
-          </p>
-        </div>
 
-        <button
-          onClick={fetchEvents}
-          disabled={loading}
-          className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-white border border-border hover:border-yellow-400 text-secondary hover:text-charcoal text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-yellow-600' : ''}`} />
-          <span>Refresh Events</span>
-        </button>
+          <button
+            onClick={fetchEvents}
+            disabled={loading}
+            className="btn-secondary shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-yellow-600' : ''}`} />
+            <span>Refresh Events</span>
+          </button>
+        </div>
       </div>
 
       {events.length === 0 ? (
         /* Initial Empty State */
-        <div className="bg-white rounded-2xl border border-border p-12 text-center shadow-sm space-y-3">
+        <div className="app-card p-12 text-center space-y-3">
           <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center justify-center mx-auto mb-2">
             <History className="w-6 h-6" />
           </div>
@@ -97,16 +99,16 @@ export const EventHistoryPage: React.FC = () => {
       ) : (
         <>
           {/* Filters & Search Toolbar */}
-          <div className="bg-white p-4 rounded-2xl border border-border shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+          <div className="app-card p-4 grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
             {/* Search */}
             <div className="sm:col-span-6 relative">
-              <Search className="w-4 h-4 text-secondary absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-secondary absolute left-3 top-3" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by actor, target ID, details..."
-                className="w-full bg-surface border border-border rounded-xl pl-9 pr-3 py-2 text-charcoal focus:outline-none focus:border-yellow-400"
+                className="app-input pl-9 text-xs"
               />
             </div>
 
@@ -115,7 +117,7 @@ export const EventHistoryPage: React.FC = () => {
               <select
                 value={selectedSeverity}
                 onChange={(e) => setSelectedSeverity(e.target.value)}
-                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-charcoal focus:outline-none focus:border-yellow-400"
+                className="app-select text-xs"
               >
                 <option value="ALL">Severity: All</option>
                 <option value="LOW">Severity: Low</option>
@@ -130,7 +132,7 @@ export const EventHistoryPage: React.FC = () => {
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-charcoal focus:outline-none focus:border-yellow-400"
+                className="app-select text-xs"
               >
                 <option value="ALL">Type: All Events</option>
                 <option value="SIGNATURE_CREATED">Signature Created</option>
@@ -150,8 +152,8 @@ export const EventHistoryPage: React.FC = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-sans">
-                  <thead className="bg-surface text-secondary uppercase tracking-wider font-semibold border-b border-border">
+                <table className="w-full text-left font-sans">
+                  <thead className="bg-surface text-secondary text-xs font-semibold uppercase tracking-wider border-b border-border">
                     <tr>
                       <th className="py-3 px-4">Time</th>
                       <th className="py-3 px-4">Event</th>
@@ -161,24 +163,24 @@ export const EventHistoryPage: React.FC = () => {
                       <th className="py-3 px-4">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-border text-xs sm:text-sm">
                     {filteredEvents.map((evt) => (
                       <tr key={evt.id} className="hover:bg-surface/60 transition-colors">
-                        <td className="py-3 px-4 text-secondary font-mono text-[11px] whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-secondary font-mono text-xs whitespace-nowrap">
                           {new Date(evt.timestamp).toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 font-semibold text-charcoal whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-semibold text-charcoal whitespace-nowrap">
                           {evt.signer_or_actor} &rarr; {evt.session_or_target}
                         </td>
-                        <td className="py-3 px-4 text-charcoal font-medium whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-charcoal font-medium whitespace-nowrap">
                           {evt.event_type}
                         </td>
-                        <td className="py-3 px-4 font-semibold text-charcoal whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-semibold text-charcoal whitespace-nowrap">
                           {evt.result_status}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full border text-[10px] font-semibold ${
+                            className={`px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
                               evt.threat_level === 'CRITICAL' || evt.threat_level === 'HIGH'
                                 ? 'bg-red-50 border-red-200 text-red-700'
                                 : evt.threat_level === 'MEDIUM'
@@ -189,7 +191,7 @@ export const EventHistoryPage: React.FC = () => {
                             {evt.threat_level}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-secondary max-w-sm">{evt.details}</td>
+                        <td className="py-3.5 px-4 text-secondary max-w-sm text-xs sm:text-sm leading-relaxed">{evt.details}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -9,9 +9,38 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { EventHistoryPage } from './pages/EventHistoryPage';
 import { useHealth } from './hooks/useHealth';
 
+interface WorkflowContext {
+  signatureId?: string;
+  signerId?: string;
+  message?: string;
+  attackId?: string;
+  attackType?: string;
+}
+
 export const App: React.FC = () => {
   const { health, latencyMs, refetch, loading } = useHealth(10000);
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [workflowContext, setWorkflowContext] = useState<WorkflowContext>({});
+
+  const handleContinueToAttack = (context: { signatureId: string; signerId: string; message: string }) => {
+    setWorkflowContext((prev) => ({
+      ...prev,
+      signatureId: context.signatureId,
+      signerId: context.signerId,
+      message: context.message,
+    }));
+    setActiveTab('attacks');
+  };
+
+  const handleContinueToDetection = (context: { signatureId: string; attackId: string; attackType: string }) => {
+    setWorkflowContext((prev) => ({
+      ...prev,
+      signatureId: context.signatureId,
+      attackId: context.attackId,
+      attackType: context.attackType,
+    }));
+    setActiveTab('detection');
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-surface text-charcoal font-sans">
@@ -25,10 +54,29 @@ export const App: React.FC = () => {
       />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
+        {activeTab === 'signatures' && (
+          <QuantumSignaturePage
+            onContinueToAttack={handleContinueToAttack}
+            onNavigate={setActiveTab}
+            initialSignatureId={workflowContext.signatureId}
+          />
+        )}
+        {activeTab === 'attacks' && (
+          <AttackSimulatorPage
+            initialSignatureId={workflowContext.signatureId}
+            onContinueToDetection={handleContinueToDetection}
+            onNavigate={setActiveTab}
+          />
+        )}
+        {activeTab === 'detection' && (
+          <ThreatDetectionPage
+            initialSignatureId={workflowContext.signatureId}
+            initialAttackId={workflowContext.attackId}
+            initialAttackType={workflowContext.attackType}
+            onNavigate={setActiveTab}
+          />
+        )}
         {activeTab === 'quantum' && <QuantumLabPage />}
-        {activeTab === 'signatures' && <QuantumSignaturePage />}
-        {activeTab === 'attacks' && <AttackSimulatorPage />}
-        {activeTab === 'detection' && <ThreatDetectionPage />}
         {activeTab === 'analytics' && <AnalyticsPage />}
         {activeTab === 'history' && <EventHistoryPage />}
       </main>

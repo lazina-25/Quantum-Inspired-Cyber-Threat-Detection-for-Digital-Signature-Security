@@ -233,6 +233,11 @@ def classify_threat_scenario(
         "theoretical_forgery_bound": forgery_assessment.theoretical_forgery_bound,
         "timestamp_delta_seconds": timestamp_delta,
         "parity_delta": parity_delta,
+        "expected_distribution": expected_dist,
+        "observed_distribution": observed_dist,
+        "total_tokens": total_tokens,
+        "observed_matches": observed_matches,
+        "mismatches": mismatches,
         "thresholds": {
             "qber_max": ThresholdCalibration.QBER_MAX_THRESHOLD,
             "tvd_max": ThresholdCalibration.TVD_MAX_THRESHOLD,

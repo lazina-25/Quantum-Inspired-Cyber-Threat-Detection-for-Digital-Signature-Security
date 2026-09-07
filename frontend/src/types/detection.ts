@@ -30,6 +30,7 @@ export interface ThreatAnalysisResponse {
   forgery_probability: number;
   evidence: string[];
   telemetry: {
+    analysis_time_ms?: number;
     qber: number;
     total_variation_distance: number;
     fidelity: number;
@@ -39,6 +40,11 @@ export interface ThreatAnalysisResponse {
     theoretical_forgery_bound: number;
     timestamp_delta_seconds: number;
     parity_delta: number;
+    expected_distribution?: Record<string, number>;
+    observed_distribution?: Record<string, number>;
+    total_tokens?: number;
+    observed_matches?: number;
+    mismatches?: number;
     thresholds: {
       qber_max: number;
       tvd_max: number;

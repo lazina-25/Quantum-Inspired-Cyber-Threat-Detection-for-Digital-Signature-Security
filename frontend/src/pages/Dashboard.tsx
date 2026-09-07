@@ -6,12 +6,11 @@ import {
   Activity,
   ArrowRight,
   RefreshCw,
-  Atom,
   TrendingUp,
   Play,
-  CheckCircle2,
-  Clock,
   Shield,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { getAnalyticsSummaryApi } from '../services/analyticsApi';
 import { AnalyticsSummaryResponse } from '../types/analytics';
@@ -53,7 +52,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const hasSignatures = (summary?.total_signatures ?? 0) > 0;
   const hasAttacks = (summary?.total_attacks ?? 0) > 0;
   const hasThreatAnalyses = (summary?.total_threat_analyses ?? 0) > 0;
-  const hasEvents = (summary?.recent_events?.length ?? 0) > 0;
 
   return (
     <div className="space-y-8 pb-12">
@@ -66,23 +64,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-white p-6 sm:p-10 border border-[#EAEAEA] shadow-sm">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-charcoal text-xs font-semibold mb-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-100/90 border border-yellow-300 text-charcoal text-xs font-semibold tracking-tight shadow-xs mb-3.5">
             <Shield className="w-3.5 h-3.5 text-yellow-700" />
             <span>Quantum QDS &bull; Secure. Verifiable. Future-Ready.</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-charcoal tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-charcoal tracking-[-0.035em] leading-[1.15]">
             Quantum-Inspired Cyber Threat Detection
           </h1>
 
-          <p className="mt-3 text-charcoal-500 text-sm sm:text-base leading-relaxed">
+          <p className="mt-2.5 text-secondary text-sm sm:text-base leading-relaxed max-w-2xl font-normal">
             Secure and verify digital signatures using quantum principles and statistical analysis.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <button
               onClick={() => onNavigate && onNavigate('signatures')}
-              className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs sm:text-sm shadow-sm transition-all"
+              className="btn-primary"
             >
               <span>Get Started</span>
               <ArrowRight className="w-4 h-4 text-charcoal" />
@@ -90,23 +88,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
             <button
               onClick={() => onNavigate && onNavigate('quantum')}
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-charcoal font-semibold text-xs sm:text-sm shadow-xs transition-all"
+              className="btn-secondary"
             >
-              <span>Explore</span>
+              <span>Explore Lab</span>
             </button>
 
             <button
               onClick={() => setDemoOpen(true)}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-surface hover:bg-yellow-50 text-charcoal font-medium text-xs sm:text-sm border border-[#EAEAEA] transition-colors"
+              className="btn-secondary"
             >
               <Play className="w-3.5 h-3.5 text-yellow-600 fill-yellow-600" />
-              <span>Run Demo</span>
+              <span>Run Automated Demo</span>
             </button>
 
             <button
               onClick={handleRefreshAll}
               disabled={refreshing}
-              className="p-2.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-charcoal-500 hover:text-charcoal transition-colors disabled:opacity-50"
+              className="h-10 w-10 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-secondary hover:text-charcoal transition-colors disabled:opacity-50 inline-flex items-center justify-center shadow-xs"
               title="Refresh Telemetry"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-charcoal' : ''}`} />
@@ -118,18 +116,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* 4 Clean Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Metric 1: Total Signatures */}
-        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Total Signatures</span>
+            <span className="text-xs sm:text-sm font-medium text-secondary">Total Signatures</span>
             <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
               <KeyRound className="w-4 h-4 text-yellow-800" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-extrabold text-charcoal font-sans">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums">
               {summary?.total_signatures ?? 0}
-            </span>
-            <p className="mt-1 text-xs text-charcoal-500">
+            </div>
+            <p className="mt-1 text-xs text-secondary leading-normal">
               {hasSignatures
                 ? `${summary?.valid_signatures ?? 0} valid, ${summary?.failed_signatures ?? 0} rejected`
                 : 'No signatures created yet'}
@@ -138,354 +136,212 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
 
         {/* Metric 2: Attacks Simulated */}
-        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Attacks Simulated</span>
+            <span className="text-xs sm:text-sm font-medium text-secondary">Attacks Simulated</span>
             <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
               <Skull className="w-4 h-4 text-yellow-800" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-extrabold text-charcoal font-sans">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums">
               {summary?.total_attacks ?? 0}
-            </span>
-            <p className="mt-1 text-xs text-charcoal-500">
+            </div>
+            <p className="mt-1 text-xs text-secondary leading-normal">
               {hasAttacks ? 'Across controlled attack scenarios' : 'No simulations run yet'}
             </p>
           </div>
         </div>
 
         {/* Metric 3: Threats Detected */}
-        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Threats Detected</span>
+            <span className="text-xs sm:text-sm font-medium text-secondary">Threats Detected</span>
             <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
               <ShieldCheck className="w-4 h-4 text-yellow-800" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-extrabold text-charcoal font-sans">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums">
               {hasAttacks ? (summary?.total_threat_analyses ?? 0) : 0}
-            </span>
-            <p className="mt-1 text-xs text-charcoal-500">
+            </div>
+            <p className="mt-1 text-xs text-secondary leading-normal">
               {hasAttacks ? 'Deterministic threshold verification' : 'No threats detected yet'}
             </p>
           </div>
         </div>
 
         {/* Metric 4: Average Analysis Time */}
-        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors">
+        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-300 transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-charcoal-500 uppercase tracking-wider">Average Analysis Time</span>
+            <span className="text-xs sm:text-sm font-medium text-secondary">Average Analysis Time</span>
             <div className="p-2 rounded-xl bg-yellow-100 text-charcoal">
               <Activity className="w-4 h-4 text-yellow-800" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-extrabold text-charcoal font-sans">
+          <div className="mt-4">
+            <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums">
               {hasThreatAnalyses ? `${summary?.average_detection_time_ms.toFixed(1)} ms` : '0 ms'}
-            </span>
-            <p className="mt-1 text-xs text-charcoal-500">
+            </div>
+            <p className="mt-1 text-xs text-secondary leading-normal">
               {hasThreatAnalyses ? 'Real-time statistical measurement' : 'No analyses performed yet'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* How it Works - Simple 5-Step Workflow */}
-      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-base font-bold text-charcoal">How It Works</h2>
-          <p className="text-xs text-charcoal-500 mt-0.5">A complete quantum security workflow in 5 simple steps</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
-              <span>STEP 1</span>
-              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+      {/* Main Security Workflow Section */}
+      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 sm:p-7 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-yellow-600" />
+              <span>Core Security Pipeline</span>
             </div>
-            <div className="mt-2">
-              <h3 className="text-xs font-bold text-charcoal">Create Signature</h3>
-              <p className="text-[11px] text-charcoal-500 mt-0.5">Generate a secure quantum digital signature for your message.</p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
-              <span>STEP 2</span>
-              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-            </div>
-            <div className="mt-2">
-              <h3 className="text-xs font-bold text-charcoal">Verify Signature</h3>
-              <p className="text-[11px] text-charcoal-500 mt-0.5">Perform quantum measurement to confirm authenticity.</p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
-              <span>STEP 3</span>
-              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-            </div>
-            <div className="mt-2">
-              <h3 className="text-xs font-bold text-charcoal">Simulate Attack</h3>
-              <p className="text-[11px] text-charcoal-500 mt-0.5">Safely test forgery, replay, or channel eavesdropping.</p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
-              <span>STEP 4</span>
-              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-            </div>
-            <div className="mt-2">
-              <h3 className="text-xs font-bold text-charcoal">Detect Threats</h3>
-              <p className="text-[11px] text-charcoal-500 mt-0.5">Check measurement deviations against threshold boundaries.</p>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs font-bold text-charcoal-400">
-              <span>STEP 5</span>
-              <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-            </div>
-            <div className="mt-2">
-              <h3 className="text-xs font-bold text-charcoal">View Analytics</h3>
-              <p className="text-[11px] text-charcoal-500 mt-0.5">Review system performance and telemetry insights.</p>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-charcoal tracking-tight mt-1">Security Workflow</h2>
+            <p className="text-xs sm:text-sm text-secondary mt-1 leading-normal">
+              Follow this step-by-step pipeline to create signatures, test adversarial scenarios, and inspect deterministic threat verdicts.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Quick Actions Section */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-base font-bold text-charcoal">Quick Actions</h2>
-          <p className="text-xs text-charcoal-500 mt-0.5">Explore protocols, simulate threats, and verify signatures</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* Card 1: Quantum Lab */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Step 1: Digital Signature */}
+          <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] hover:border-yellow-400 transition-all flex flex-col justify-between group h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
-                <Atom className="w-5 h-5" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="w-7 h-7 rounded-lg bg-yellow-400 text-charcoal font-bold text-xs flex items-center justify-center shadow-xs">
+                  1
+                </span>
+                <span className="text-xs font-semibold text-secondary">Step 1 of 4</span>
               </div>
-              <h3 className="font-bold text-charcoal text-sm">Quantum Lab</h3>
-              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
-                Explore quantum circuits and teleportation.
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate && onNavigate('quantum')}
-              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
-            >
-              <span>Open Lab</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Card 2: Digital Signatures */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <h3 className="font-bold text-charcoal text-sm">Digital Signatures</h3>
-              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
-                Create and verify signatures.
+              <h3 className="text-lg font-semibold text-charcoal flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-yellow-800" />
+                <span>Digital Signature</span>
+              </h3>
+              <p className="text-sm text-secondary mt-2 leading-relaxed min-h-[40px]">
+                Create and verify quantum digital signatures with teleported token states.
               </p>
             </div>
             <button
               onClick={() => onNavigate && onNavigate('signatures')}
-              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+              className="btn-primary w-full mt-5"
             >
-              <span>Create Signature</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Start</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Card 3: Attack Simulator */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+          {/* Step 2: Attack Simulator */}
+          <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] hover:border-yellow-400 transition-all flex flex-col justify-between group h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
-                <Skull className="w-5 h-5" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="w-7 h-7 rounded-lg bg-yellow-400 text-charcoal font-bold text-xs flex items-center justify-center shadow-xs">
+                  2
+                </span>
+                <span className="text-xs font-semibold text-secondary">Step 2 of 4</span>
               </div>
-              <h3 className="font-bold text-charcoal text-sm">Attack Simulator</h3>
-              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
-                Test controlled attack scenarios.
+              <h3 className="text-lg font-semibold text-charcoal flex items-center gap-2">
+                <Skull className="w-4 h-4 text-yellow-800" />
+                <span>Attack Simulator</span>
+              </h3>
+              <p className="text-sm text-secondary mt-2 leading-relaxed min-h-[40px]">
+                Test controlled threat vectors: forgery, impersonation, replay, or channel noise.
               </p>
             </div>
             <button
               onClick={() => onNavigate && onNavigate('attacks')}
-              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+              className="btn-primary w-full mt-5"
             >
-              <span>Run Simulation</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Simulate</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Card 4: Threat Detection */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+          {/* Step 3: Threat Detection */}
+          <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] hover:border-yellow-400 transition-all flex flex-col justify-between group h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
-                <Activity className="w-5 h-5" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="w-7 h-7 rounded-lg bg-yellow-400 text-charcoal font-bold text-xs flex items-center justify-center shadow-xs">
+                  3
+                </span>
+                <span className="text-xs font-semibold text-secondary">Step 3 of 4</span>
               </div>
-              <h3 className="font-bold text-charcoal text-sm">Threat Detection</h3>
-              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
-                Analyze signatures for threats.
+              <h3 className="text-lg font-semibold text-charcoal flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-yellow-800" />
+                <span>Threat Detection</span>
+              </h3>
+              <p className="text-sm text-secondary mt-2 leading-relaxed min-h-[40px]">
+                Analyze resulting quantum measurement distributions and evaluate threshold limits.
               </p>
             </div>
             <button
               onClick={() => onNavigate && onNavigate('detection')}
-              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+              className="btn-primary w-full mt-5"
             >
-              <span>Analyze</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Detect</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Card 5: Analytics */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm hover:border-yellow-400 transition-all flex flex-col justify-between group">
+          {/* Step 4: Analysis & Telemetry */}
+          <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] hover:border-yellow-400 transition-all flex flex-col justify-between group h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-800 mb-3">
-                <TrendingUp className="w-5 h-5" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="w-7 h-7 rounded-lg bg-yellow-400 text-charcoal font-bold text-xs flex items-center justify-center shadow-xs">
+                  4
+                </span>
+                <span className="text-xs font-semibold text-secondary">Step 4 of 4</span>
               </div>
-              <h3 className="font-bold text-charcoal text-sm">Analytics</h3>
-              <p className="text-xs text-charcoal-500 mt-1 leading-relaxed">
-                View security and performance results.
+              <h3 className="text-lg font-semibold text-charcoal flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-yellow-800" />
+                <span>Analysis</span>
+              </h3>
+              <p className="text-sm text-secondary mt-2 leading-relaxed min-h-[40px]">
+                View detailed statistics, distribution visualizations, and verification outcomes.
               </p>
             </div>
             <button
               onClick={() => onNavigate && onNavigate('analytics')}
-              className="mt-4 w-full py-2 px-3 rounded-xl bg-surface hover:bg-yellow-400 hover:text-charcoal text-charcoal text-xs font-bold border border-[#EAEAEA] hover:border-yellow-400 transition-colors flex items-center justify-center space-x-1.5"
+              className="btn-primary w-full mt-5"
             >
-              <span>View Analytics</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>View Results</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Subsystem Readiness & Architecture */}
-      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+      {/* Subsystem Telemetry Status */}
+      <div className="bg-white rounded-2xl border border-[#EAEAEA] p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-charcoal">Quantum Security Subsystems</h2>
-            <p className="text-xs text-charcoal-500">Real-time status of verification and simulation pipelines</p>
+            <h2 className="text-base sm:text-lg font-semibold text-charcoal">System Health & Verification Engines</h2>
+            <p className="text-xs sm:text-sm text-secondary mt-0.5">Live status of physics verification modules</p>
           </div>
-          <div className="flex items-center space-x-2 text-xs text-success font-medium">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Ready</span>
+          <div className="flex items-center space-x-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>All Engines Active</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           {health?.modules ? (
             Object.entries(health.modules).map(([name, mod]: [string, any]) => (
-              <div key={name} className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
+              <div key={name} className="p-4 rounded-xl bg-surface border border-[#EAEAEA] flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-charcoal capitalize">{name.replace('_', ' ')}</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-charcoal-800 border border-yellow-200">
+                  <span className="font-semibold text-charcoal text-sm capitalize">{name.replace(/_/g, ' ')}</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-100 text-charcoal border border-yellow-200">
                     {mod.status.toUpperCase()}
                   </span>
                 </div>
-                <p className="text-[11px] text-charcoal-500 mt-2">{mod.details}</p>
+                <p className="text-xs text-secondary mt-2 leading-normal">{mod.description || mod.details}</p>
               </div>
             ))
           ) : (
-            <div className="col-span-4 p-4 text-center text-charcoal-400">Loading subsystem telemetry...</div>
+            <div className="col-span-4 p-4 text-center text-secondary text-sm">Loading subsystem telemetry...</div>
           )}
         </div>
-      </div>
-
-      {/* Recent Activity Feed */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-charcoal">Recent Activity</h2>
-            <p className="text-xs text-charcoal-500">Audit trail of quantum signatures and security verifications</p>
-          </div>
-          {hasEvents && onNavigate && (
-            <button
-              onClick={() => onNavigate('history')}
-              className="text-xs font-semibold text-charcoal hover:text-yellow-700 flex items-center space-x-1"
-            >
-              <span>View Full History</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {hasEvents ? (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface text-charcoal-500 uppercase tracking-wider font-semibold border-b border-[#EAEAEA]">
-                  <tr>
-                    <th className="py-3 px-4">Timestamp</th>
-                    <th className="py-3 px-4">Event Type</th>
-                    <th className="py-3 px-4">Actor / Verifier</th>
-                    <th className="py-3 px-4">Target / Session</th>
-                    <th className="py-3 px-4">Threat Level</th>
-                    <th className="py-3 px-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EAEAEA]">
-                  {summary!.recent_events!.slice(0, 6).map((evt) => (
-                    <tr key={evt.id} className="hover:bg-yellow-50/50 transition-colors">
-                      <td className="py-3 px-4 text-charcoal-500 font-mono text-[11px]">
-                        {new Date(evt.timestamp).toLocaleTimeString()}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-charcoal">{evt.event_type}</td>
-                      <td className="py-3 px-4 text-charcoal-600 font-mono">{evt.signer_or_actor}</td>
-                      <td className="py-3 px-4 text-charcoal-500 font-mono truncate max-w-xs">{evt.session_or_target}</td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
-                            evt.threat_level === 'CRITICAL' || evt.threat_level === 'HIGH'
-                              ? 'bg-red-50 border-red-200 text-danger'
-                              : evt.threat_level === 'MEDIUM'
-                              ? 'bg-amber-50 border-amber-200 text-warning'
-                              : 'bg-green-50 border-green-200 text-success'
-                          }`}
-                        >
-                          {evt.threat_level}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-charcoal font-medium">{evt.result_status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] p-10 text-center shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-yellow-100 text-charcoal flex items-center justify-center mx-auto mb-3">
-              <Clock className="w-6 h-6 text-yellow-800" />
-            </div>
-            <h3 className="font-bold text-charcoal text-sm">No recent activity</h3>
-            <p className="text-xs text-charcoal-500 max-w-md mx-auto mt-1">
-              Your signatures, simulations and security events will appear here.
-            </p>
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <button
-                onClick={() => setDemoOpen(true)}
-                className="px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs transition-colors inline-flex items-center space-x-1.5 shadow-xs"
-              >
-                <Play className="w-3.5 h-3.5 fill-charcoal" />
-                <span>Run Your First Demo</span>
-              </button>
-              <button
-                onClick={() => onNavigate && onNavigate('signatures')}
-                className="px-4 py-2 rounded-xl bg-surface hover:bg-yellow-50 text-charcoal font-semibold text-xs border border-[#EAEAEA] transition-colors"
-              >
-                Create Signature
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

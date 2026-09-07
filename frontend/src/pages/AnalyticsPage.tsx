@@ -84,17 +84,17 @@ export const AnalyticsPage: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div className="rounded-2xl bg-white p-6 sm:p-8 border border-border shadow-sm">
+      <div className="page-header-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-300 text-charcoal text-xs font-semibold mb-3">
-              <TrendingUp className="w-3.5 h-3.5 text-yellow-600" />
+            <div className="page-header-badge">
+              <TrendingUp className="w-3.5 h-3.5 text-yellow-800" />
               <span>System Telemetry & Performance</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal tracking-tight">
+            <h1 className="page-title">
               Security Analytics
             </h1>
-            <p className="mt-2 text-secondary text-sm leading-relaxed">
+            <p className="page-description">
               Empirical statistical evaluations, detection metrics, and attack distributions dynamically queried from backend database records.
             </p>
           </div>
@@ -102,7 +102,7 @@ export const AnalyticsPage: React.FC = () => {
           <button
             onClick={fetchAnalytics}
             disabled={loading}
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white border border-border hover:border-yellow-400 text-secondary hover:text-charcoal text-xs font-semibold transition-colors disabled:opacity-50 shadow-sm"
+            className="btn-secondary shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-yellow-600' : ''}`} />
             <span>Refresh Analytics</span>
@@ -112,7 +112,7 @@ export const AnalyticsPage: React.FC = () => {
 
       {!hasData ? (
         /* Empty State */
-        <div className="bg-white rounded-2xl border border-border p-12 text-center shadow-sm space-y-4">
+        <div className="app-card p-12 text-center space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-yellow-100 text-yellow-700 border border-yellow-200 flex items-center justify-center mx-auto">
             <TrendingUp className="w-7 h-7" />
           </div>
@@ -128,43 +128,43 @@ export const AnalyticsPage: React.FC = () => {
         <div className="space-y-8">
           {/* 4 Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-border shadow-sm">
-              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">Total Signatures</span>
-              <div className="text-2xl font-extrabold text-charcoal mt-1">{summary?.total_signatures ?? 0}</div>
-              <div className="text-xs text-secondary mt-1">{summary?.valid_signatures ?? 0} valid accepted</div>
+            <div className="app-card p-5">
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">Total Signatures</span>
+              <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums mt-1.5">{summary?.total_signatures ?? 0}</div>
+              <div className="text-xs sm:text-sm text-secondary mt-1">{summary?.valid_signatures ?? 0} valid accepted</div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-border shadow-sm">
-              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">Attacks Simulated</span>
-              <div className="text-2xl font-extrabold text-charcoal mt-1">{summary?.total_attacks ?? 0}</div>
-              <div className="text-xs text-secondary mt-1">Across 5 monitored vectors</div>
+            <div className="app-card p-5">
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">Attacks Simulated</span>
+              <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums mt-1.5">{summary?.total_attacks ?? 0}</div>
+              <div className="text-xs sm:text-sm text-secondary mt-1">Across 5 monitored vectors</div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-border shadow-sm">
-              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">Threats Detected</span>
-              <div className="text-2xl font-extrabold text-charcoal mt-1">{summary?.total_threat_analyses ?? 0}</div>
-              <div className="text-xs text-secondary mt-1">
+            <div className="app-card p-5">
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">Threats Detected</span>
+              <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums mt-1.5">{summary?.total_threat_analyses ?? 0}</div>
+              <div className="text-xs sm:text-sm text-secondary mt-1">
                 {(summary?.total_attacks ?? 0) > 0 ? `${((summary?.detection_rate ?? 0) * 100).toFixed(0)}% detection rate` : 'No attacks yet'}
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-border shadow-sm">
-              <span className="text-xs font-bold text-secondary uppercase tracking-wider block">Average Analysis Time</span>
-              <div className="text-2xl font-extrabold text-charcoal mt-1">
+            <div className="app-card p-5">
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">Average Analysis Time</span>
+              <div className="text-3xl sm:text-4xl font-bold text-charcoal tracking-tight tabular-nums mt-1.5">
                 {(summary?.total_threat_analyses ?? 0) > 0 ? `${summary?.average_detection_time_ms.toFixed(1)} ms` : '0 ms'}
               </div>
-              <div className="text-xs text-secondary mt-1">Real-time evaluation latency</div>
+              <div className="text-xs sm:text-sm text-secondary mt-1">Real-time evaluation latency</div>
             </div>
           </div>
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left: Attacks by Type */}
-            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-border shadow-sm space-y-4">
+            <div className="lg:col-span-7 app-card p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-charcoal">Attacks by Type</h2>
-                  <p className="text-xs text-secondary">Distribution of simulated adversarial scenarios</p>
+                  <h2 className="section-title">Attacks by Type</h2>
+                  <p className="section-subtitle">Distribution of simulated adversarial scenarios</p>
                 </div>
                 <span className="text-xs font-mono font-semibold text-secondary">Total: {summary?.total_attacks ?? 0}</span>
               </div>
@@ -185,10 +185,10 @@ export const AnalyticsPage: React.FC = () => {
             </div>
 
             {/* Right: Request Integrity Ratio */}
-            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-border shadow-sm space-y-4 flex flex-col justify-between">
+            <div className="lg:col-span-5 app-card p-5 sm:p-6 space-y-4 flex flex-col justify-between">
               <div>
-                <h2 className="text-sm font-bold text-charcoal">Verification Outcomes</h2>
-                <p className="text-xs text-secondary">Ratio of valid legitimate signatures vs simulated attacks</p>
+                <h2 className="section-title">Verification Outcomes</h2>
+                <p className="section-subtitle">Ratio of valid legitimate signatures vs simulated attacks</p>
               </div>
 
               <div className="h-56 w-full flex items-center justify-center">

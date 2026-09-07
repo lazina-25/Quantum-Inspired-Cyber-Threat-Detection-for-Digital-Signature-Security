@@ -9,17 +9,18 @@ export const QuantumLabPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Sub-Nav */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
-        <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-charcoal text-xs font-semibold mb-2">
-            <Atom className="w-3.5 h-3.5 text-yellow-800" />
-            <span>Quantum Simulation Lab</span>
+      <div className="page-header-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="page-header-badge">
+              <Atom className="w-3.5 h-3.5 text-yellow-800" />
+              <span>Quantum Simulation Lab</span>
+            </div>
+            <h1 className="page-title">Quantum Physics & Teleportation Lab</h1>
+            <p className="page-description">
+              Simulate 2-qubit Bell entanglement states and 3-qubit Bennett teleportation protocols.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-charcoal">Quantum Physics & Teleportation Lab</h1>
-          <p className="text-xs text-charcoal-500 mt-1">
-            Simulate 2-qubit Bell entanglement states and 3-qubit Bennett teleportation protocols.
-          </p>
-        </div>
 
         {/* Tab switcher */}
         <div className="flex rounded-xl bg-surface p-1 text-xs font-medium shrink-0 border border-[#EAEAEA]">
@@ -45,6 +46,7 @@ export const QuantumLabPage: React.FC = () => {
             <Radio className="w-3.5 h-3.5" />
             <span>Quantum Teleportation</span>
           </button>
+          </div>
         </div>
       </div>
 

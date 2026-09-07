@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Skull,
   ShieldAlert,
-  Flame,
   UserX,
   History,
   Radio,
@@ -28,6 +27,7 @@ import {
 } from '../services/attackApi';
 import { listSignaturesApi, createSignatureApi } from '../services/signatureApi';
 import { SignatureListItem } from '../types/signature';
+import { NavTab } from '../components/Navbar';
 
 const ATTACK_VECTORS: {
   id: AttackTypeId;
@@ -43,7 +43,7 @@ const ATTACK_VECTORS: {
     name: 'Signature Forgery',
     threatCode: 'THREAT-FORGERY-01',
     icon: Skull,
-    badgeColor: 'border-red-200 bg-red-50 text-danger',
+    badgeColor: 'border-yellow-200 bg-yellow-50 text-charcoal',
     description: 'Attempts to alter message content or substitute quantum tokens.',
     targetMechanism: 'Message Hash Tampering & Quantum Token Substitution',
   },
@@ -52,7 +52,7 @@ const ATTACK_VECTORS: {
     name: 'Impersonation',
     threatCode: 'THREAT-IMPERSONATION-02',
     icon: UserX,
-    badgeColor: 'border-amber-200 bg-amber-50 text-warning',
+    badgeColor: 'border-yellow-200 bg-yellow-50 text-charcoal',
     description: 'Attempts to sign a message masquerading as an authorized signer.',
     targetMechanism: 'Identity Spoofing & Asymmetric Parity Mismatch',
   },
@@ -61,7 +61,7 @@ const ATTACK_VECTORS: {
     name: 'Replay Attack',
     threatCode: 'THREAT-REPLAY-03',
     icon: History,
-    badgeColor: 'border-amber-200 bg-amber-50 text-warning',
+    badgeColor: 'border-yellow-200 bg-yellow-50 text-charcoal',
     description: 'Attempts to reuse a previously valid signature or session.',
     targetMechanism: 'Stale Timestamps & Nonce Collision',
   },
@@ -70,7 +70,7 @@ const ATTACK_VECTORS: {
     name: 'Channel Manipulation',
     threatCode: 'THREAT-CHANNEL-04',
     icon: Radio,
-    badgeColor: 'border-yellow-200 bg-yellow-50 text-yellow-800',
+    badgeColor: 'border-yellow-200 bg-yellow-50 text-charcoal',
     description: 'Injects noise or eavesdropping disturbance into the quantum channel.',
     targetMechanism: 'Channel Depolarization & Quantum State Disturbance',
   },
@@ -79,16 +79,27 @@ const ATTACK_VECTORS: {
     name: 'Unauthorized Verification',
     threatCode: 'THREAT-UNAUTH-05',
     icon: Lock,
-    badgeColor: 'border-[#EAEAEA] bg-surface text-charcoal',
+    badgeColor: 'border-yellow-200 bg-yellow-50 text-charcoal',
     description: 'Attempts to verify a signature without authorization.',
     targetMechanism: 'Unregistered Verifier Probe & Unallocated Basis Access',
   },
 ];
 
-export const AttackSimulatorPage: React.FC = () => {
+
+interface AttackSimulatorPageProps {
+  initialSignatureId?: string;
+  onContinueToDetection?: (context: { signatureId: string; attackId: string; attackType: string }) => void;
+  onNavigate?: (tab: NavTab) => void;
+}
+
+export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
+  initialSignatureId,
+  onContinueToDetection,
+  onNavigate,
+}) => {
   const [selectedAttack, setSelectedAttack] = useState<AttackTypeId>('forgery');
   const [signatures, setSignatures] = useState<SignatureListItem[]>([]);
-  const [targetSigId, setTargetSigId] = useState<string>('');
+  const [targetSigId, setTargetSigId] = useState<string>(initialSignatureId || '');
   const [loading, setLoading] = useState<boolean>(false);
   const [attackResult, setAttackResult] = useState<AttackResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -194,31 +205,68 @@ export const AttackSimulatorPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (initialSignatureId) {
+      setTargetSigId(initialSignatureId);
+    }
+  }, [initialSignatureId]);
+
   const activeVector = ATTACK_VECTORS.find((v) => v.id === selectedAttack) || ATTACK_VECTORS[0];
+  const selectedSig = signatures.find((s) => s.signature_id === targetSigId);
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Target Signature Context Banner */}
+      {selectedSig && (
+        <div className="bg-white rounded-2xl p-5 border border-[#EAEAEA] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-yellow-100 text-charcoal">
+              <Database className="w-5 h-5 text-yellow-800" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-secondary">Target Session:</span>
+                <span className="text-xs font-mono font-bold text-charcoal bg-surface px-2 py-0.5 rounded border border-[#EAEAEA]">
+                  {selectedSig.signature_id}
+                </span>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-success font-mono">
+                  Verified Active
+                </span>
+              </div>
+              <p className="text-xs text-secondary mt-1">
+                Signer: <strong className="text-charcoal">{selectedSig.signer_id}</strong> &bull; Tokens: <strong className="text-charcoal">{selectedSig.token_count} Qubits</strong> &bull; Message: <span className="italic font-mono text-[11px]">"{selectedSig.message_preview}"</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right text-xs text-secondary shrink-0">
+            <span className="block font-semibold text-charcoal">Testing Threat Resilience</span>
+            <span className="text-[11px] text-yellow-700 font-medium">Ready for Adversarial Injection</span>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
-      <div className="rounded-2xl bg-white p-6 sm:p-8 border border-[#EAEAEA] shadow-sm">
+      <div className="page-header-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-200 text-charcoal text-xs font-semibold mb-3">
-              <Flame className="w-3.5 h-3.5 text-yellow-800" />
-              <span>Controlled Threat Simulation Suite</span>
+            <div className="page-header-badge">
+              <Skull className="w-3.5 h-3.5 text-yellow-800" />
+              <span>Adversarial Simulation</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal tracking-tight">
+            <h1 className="page-title">
               Attack Simulator
             </h1>
-            <p className="mt-2 text-charcoal-500 text-sm leading-relaxed">
-              Safely test how the system responds to different security threats.
+            <p className="page-description">
+              Safely test how the quantum verification system responds to different adversarial cyber threats and channel disturbances.
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 shrink-0">
             <button
               onClick={handleLaunchAttack}
               disabled={loading || !targetSigId}
-              className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-sm shadow-xs transition-all disabled:opacity-50"
+              className="btn-primary"
             >
               <Play className={`w-4 h-4 fill-charcoal ${loading ? 'animate-spin' : ''}`} />
               <span>{loading ? 'Simulating...' : 'Run Simulation'}</span>
@@ -237,8 +285,8 @@ export const AttackSimulatorPage: React.FC = () => {
       {/* Attack Options Grid (5 Vectors) */}
       <div className="space-y-3">
         <div>
-          <h2 className="text-sm font-bold text-charcoal">1. Select Attack Scenario</h2>
-          <p className="text-xs text-charcoal-500">Choose a threat vector to simulate against a target signature session</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-charcoal tracking-tight">1. Select Attack Scenario</h2>
+          <p className="text-xs sm:text-sm text-secondary mt-1">Choose a threat vector to simulate against a target signature session</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -249,25 +297,37 @@ export const AttackSimulatorPage: React.FC = () => {
               <button
                 key={vec.id}
                 onClick={() => setSelectedAttack(vec.id)}
-                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between h-full min-h-[140px] ${
                   isSelected
-                    ? 'bg-yellow-50 border-yellow-400 shadow-xs'
+                    ? 'bg-yellow-50 border-yellow-400 shadow-xs ring-1 ring-yellow-400'
                     : 'bg-white border-[#EAEAEA] hover:border-yellow-300'
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="p-2 rounded-xl bg-surface border border-[#EAEAEA] text-charcoal">
+                    <div
+                      className={`p-2 rounded-xl border transition-colors ${
+                        isSelected
+                          ? 'bg-yellow-400 text-charcoal border-yellow-400'
+                          : 'bg-surface border-[#EAEAEA] text-charcoal'
+                      }`}
+                    >
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-surface border border-[#EAEAEA] text-charcoal font-semibold">
+                    <span
+                      className={`text-xs font-mono px-2 py-0.5 rounded-md border font-medium ${
+                        isSelected
+                          ? 'bg-yellow-200 border-yellow-300 text-charcoal'
+                          : 'bg-surface border-[#EAEAEA] text-secondary'
+                      }`}
+                    >
                       {vec.threatCode.split('-')[1]}
                     </span>
                   </div>
-                  <h3 className="font-bold text-charcoal text-xs">{vec.name}</h3>
-                  <p className="text-[11px] text-charcoal-500 mt-1 leading-relaxed">{vec.description}</p>
+                  <h3 className="text-sm font-semibold text-charcoal leading-snug">{vec.name}</h3>
+                  <p className="text-xs text-secondary mt-1.5 leading-relaxed">{vec.description}</p>
                 </div>
-                <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-[10px] font-mono text-charcoal-700 font-medium">
+                <div className="mt-3 pt-2 border-t border-[#EAEAEA] text-xs font-mono text-secondary font-medium">
                   {vec.targetMechanism.split('&')[0]}
                 </div>
               </button>
@@ -282,8 +342,8 @@ export const AttackSimulatorPage: React.FC = () => {
         <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-charcoal flex items-center space-x-2">
-                <Database className="w-4 h-4 text-yellow-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2">
+                <Database className="w-4 h-4 text-yellow-800" />
                 <span>2. Target Signature Session</span>
               </h3>
               <button
@@ -295,11 +355,11 @@ export const AttackSimulatorPage: React.FC = () => {
             </div>
 
             {signatures.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] text-xs text-charcoal-600 text-center space-y-2">
+              <div className="p-5 rounded-2xl bg-surface border border-[#EAEAEA] text-xs text-secondary text-center space-y-2">
                 <p>No signatures in database yet.</p>
                 <button
                   onClick={handleCreateDemoSignature}
-                  className="px-3.5 py-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs transition-colors shadow-xs"
+                  className="btn-primary !h-9 text-xs"
                 >
                   Generate Target Signature
                 </button>
@@ -307,11 +367,11 @@ export const AttackSimulatorPage: React.FC = () => {
             ) : (
               <div className="space-y-3 text-xs">
                 <div>
-                  <label className="text-charcoal font-medium block mb-1">Select Target Signature:</label>
+                  <label className="app-label">Select Target Signature:</label>
                   <select
                     value={targetSigId}
                     onChange={(e) => setTargetSigId(e.target.value)}
-                    className="w-full bg-surface border border-[#EAEAEA] rounded-xl p-2.5 text-charcoal text-xs font-mono focus:outline-none focus:border-yellow-400"
+                    className="app-select font-mono"
                   >
                     {signatures.map((s) => (
                       <option key={s.signature_id} value={s.signature_id}>
@@ -329,7 +389,7 @@ export const AttackSimulatorPage: React.FC = () => {
             )}
           </div>
 
-          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] text-xs text-charcoal-600 space-y-1">
+          <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] text-xs text-secondary space-y-1">
             <span className="font-bold text-charcoal block">{activeVector.name}:</span>
             <p>{activeVector.description}</p>
           </div>
@@ -337,8 +397,8 @@ export const AttackSimulatorPage: React.FC = () => {
 
         {/* Right: Simulation Parameters for Selected Vector (7 Cols) */}
         <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-charcoal flex items-center space-x-2">
-            <Sliders className="w-4 h-4 text-yellow-600" />
+          <h3 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2">
+            <Sliders className="w-4 h-4 text-yellow-800" />
             <span>3. Simulation Parameters</span>
           </h3>
 
@@ -346,12 +406,12 @@ export const AttackSimulatorPage: React.FC = () => {
           {selectedAttack === 'forgery' && (
             <div className="space-y-4 text-xs">
               <div>
-                <label className="text-charcoal font-medium block mb-1">Forged / Modified Message Text:</label>
+                <label className="app-label">Forged / Modified Message Text:</label>
                 <textarea
                   rows={3}
                   value={forgedMessage}
                   onChange={(e) => setForgedMessage(e.target.value)}
-                  className="w-full bg-surface border border-[#EAEAEA] rounded-xl p-3 text-charcoal font-mono text-xs focus:outline-none focus:border-yellow-400"
+                  className="app-textarea"
                 />
               </div>
 
@@ -383,21 +443,21 @@ export const AttackSimulatorPage: React.FC = () => {
           {selectedAttack === 'impersonation' && (
             <div className="space-y-4 text-xs">
               <div>
-                <label className="text-charcoal font-medium block mb-1">Spoofed Signer Identity (Alice):</label>
+                <label className="app-label">Spoofed Signer Identity (Alice):</label>
                 <input
                   type="text"
                   value={spoofedSignerId}
                   onChange={(e) => setSpoofedSignerId(e.target.value)}
-                  className="w-full bg-surface border border-[#EAEAEA] rounded-xl px-3 py-2 text-charcoal font-mono text-xs focus:outline-none focus:border-yellow-400"
+                  className="app-input font-mono"
                 />
               </div>
               <div>
-                <label className="text-charcoal font-medium block mb-1">Impersonator Node Identity:</label>
+                <label className="app-label">Impersonator Node Identity:</label>
                 <input
                   type="text"
                   value={attackerId}
                   onChange={(e) => setAttackerId(e.target.value)}
-                  className="w-full bg-surface border border-[#EAEAEA] rounded-xl px-3 py-2 text-charcoal font-mono text-xs focus:outline-none focus:border-yellow-400"
+                  className="app-input font-mono"
                 />
               </div>
             </div>
@@ -475,15 +535,15 @@ export const AttackSimulatorPage: React.FC = () => {
           {selectedAttack === 'unauthorized_verification' && (
             <div className="space-y-4 text-xs">
               <div>
-                <label className="text-charcoal font-medium block mb-1">Unauthorized Verifier Identity:</label>
+                <label className="app-label">Unauthorized Verifier Identity:</label>
                 <input
                   type="text"
                   value={unauthVerifierId}
                   onChange={(e) => setUnauthVerifierId(e.target.value)}
-                  className="w-full bg-surface border border-[#EAEAEA] rounded-xl px-3 py-2 text-charcoal font-mono text-xs focus:outline-none focus:border-yellow-400"
+                  className="app-input font-mono"
                 />
               </div>
-              <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] text-xs text-charcoal-600">
+              <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] text-xs text-secondary">
                 <span>Rogue entity will attempt to probe measurement bases without authorized cryptographic credentials.</span>
               </div>
             </div>
@@ -497,27 +557,27 @@ export const AttackSimulatorPage: React.FC = () => {
           {/* Header Verdict */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
             <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-warning">
-                <ShieldAlert className="w-7 h-7" />
+              <div className="p-3 rounded-2xl bg-yellow-100 border border-yellow-200 text-charcoal">
+                <ShieldAlert className="w-7 h-7 text-yellow-800" />
               </div>
               <div>
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-bold text-charcoal">
+                <div className="flex items-center space-x-2.5">
+                  <h3 className="text-xl sm:text-2xl font-bold text-charcoal tracking-tight">
                     Simulation Complete
                   </h3>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-surface border border-[#EAEAEA] text-charcoal font-mono font-semibold">
                     {attackResult.attack_type.toUpperCase()}
                   </span>
                 </div>
-                <p className="text-xs text-charcoal-500 mt-0.5 font-mono">
-                  Attack ID: <strong>{attackResult.attack_id}</strong> &bull; Target: {attackResult.target_signature_id}
+                <p className="text-xs sm:text-sm text-secondary mt-1 font-mono">
+                  Attack ID: <strong className="text-charcoal">{attackResult.attack_id}</strong> &bull; Target: {attackResult.target_signature_id}
                 </p>
               </div>
             </div>
 
             <div className="text-right text-xs font-mono text-charcoal">
-              <div>Detection Status: <strong className="text-danger font-bold">Threat Anomaly Flagged</strong></div>
-              <div>Statistical Deviation: <strong className="text-danger font-bold">{(attackResult.statistical_deviation * 100).toFixed(1)}%</strong></div>
+              <div className="text-xs font-semibold text-secondary font-sans uppercase tracking-wider">Detection Status: <strong className="text-danger font-bold">Threat Anomaly Flagged</strong></div>
+              <div className="text-xs font-semibold text-secondary font-sans uppercase tracking-wider mt-1">Statistical Deviation: <strong className="text-2xl font-bold text-danger tracking-tight tabular-nums block">{((attackResult.statistical_deviation ?? 0) * 100).toFixed(1)}%</strong></div>
             </div>
           </div>
 
@@ -553,6 +613,32 @@ export const AttackSimulatorPage: React.FC = () => {
               {JSON.stringify(attackResult.resulting_measurements, null, 2)}
             </pre>
           </div>
+
+          {/* Workflow Progression: Step 2 -> Step 3 */}
+          <div className="pt-4 border-t border-[#EAEAEA] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-bold text-charcoal block">Attack Simulation Complete</span>
+              <span className="text-[11px] text-secondary">
+                Simulated adversarial disturbance is ready for statistical evaluation and threshold detection.
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (onContinueToDetection) {
+                  onContinueToDetection({
+                    signatureId: attackResult.target_signature_id,
+                    attackId: attackResult.attack_id,
+                    attackType: attackResult.attack_type,
+                  });
+                } else if (onNavigate) {
+                  onNavigate('detection');
+                }
+              }}
+              className="btn-primary shrink-0"
+            >
+              <span>Continue to Threat Detection &rarr;</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -560,12 +646,12 @@ export const AttackSimulatorPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-charcoal">Simulation Audit Log</h2>
-            <p className="text-xs text-charcoal-500">Historical records of simulated attack executions</p>
+            <h2 className="text-base sm:text-lg font-bold text-charcoal">Simulation Audit Log</h2>
+            <p className="text-xs sm:text-sm text-secondary">Historical records of simulated attack executions</p>
           </div>
           <button
             onClick={loadData}
-            className="px-3 py-1.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-xs text-charcoal flex items-center space-x-1.5 transition-colors"
+            className="px-3.5 py-1.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-xs font-semibold text-charcoal flex items-center space-x-1.5 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5 text-charcoal" />
             <span>Refresh</span>
