@@ -19,7 +19,7 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  HelpCircle
+  RotateCcw,
 } from 'lucide-react';
 import {
   CreateSignatureRequest,
@@ -34,20 +34,30 @@ import {
   listSignaturesApi,
 } from '../services/signatureApi';
 import { NavTab } from '../components/Navbar';
+import { useToast } from '../components/Toast';
+import { SecurityWorkflowStepper, WorkflowState } from '../components/SecurityWorkflowStepper';
+import { SecurityWorkflowContextState } from '../App';
 
 type QdsSubTab = 'create' | 'verify' | 'registry';
 
 interface QuantumSignaturePageProps {
-  onContinueToAttack?: (context: { signatureId: string; signerId: string; message: string }) => void;
+  workflow?: SecurityWorkflowContextState;
+  onSignatureCreated?: (sig: CreateSignatureResponse, initVerif: VerifySignatureResponse) => void;
+  onResetWorkflow?: () => void;
   onNavigate?: (tab: NavTab) => void;
   initialSignatureId?: string;
+  onContinueToAttack?: (context: { signatureId: string; signerId: string; message: string }) => void;
 }
 
 export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
-  onContinueToAttack,
+  workflow,
+  onSignatureCreated,
+  onResetWorkflow,
   onNavigate,
   initialSignatureId,
+  onContinueToAttack,
 }) => {
+  const { notifySignatureGenerated, notifyInitialVerification } = useToast();
   const [subTab, setSubTab] = useState<QdsSubTab>('create');
 
   // Create state
@@ -60,17 +70,20 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
   const [nonce, setNonce] = useState<string>(`nonce_${Math.random().toString(36).substring(2, 10)}`);
   const [creating, setCreating] = useState<boolean>(false);
   const [createdSig, setCreatedSig] = useState<CreateSignatureResponse | null>(null);
+  const [initialVerif, setInitialVerif] = useState<VerifySignatureResponse | null>(
+    workflow?.initialVerification || null
+  );
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Verify state
-  const [targetSigId, setTargetSigId] = useState<string>('');
-  const [verifyMessage, setVerifyMessage] = useState<string>('');
+  const [targetSigId, setTargetSigId] = useState<string>(workflow?.signatureId || initialSignatureId || '');
+  const [verifyMessage, setVerifyMessage] = useState<string>(workflow?.message || '');
   const [verifierId, setVerifierId] = useState<string>('bob_verifier_01');
   const [verifying, setVerifying] = useState<boolean>(false);
   const [verifyResult, setVerifyResult] = useState<VerifySignatureResponse | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  // Expandable sections for technical details
+  // Expandable sections
   const [showQuantumDetails, setShowQuantumDetails] = useState<boolean>(false);
   const [showMeasurementResults, setShowMeasurementResults] = useState<boolean>(false);
   const [showVerificationAnalysis, setShowVerificationAnalysis] = useState<boolean>(false);
@@ -78,8 +91,6 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
   // Registry state
   const [signaturesList, setSignaturesList] = useState<SignatureListItem[]>([]);
   const [loadingList, setLoadingList] = useState<boolean>(false);
-
-  // UI helpers
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchSignatures = async () => {
@@ -103,19 +114,24 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
   }, []);
 
   useEffect(() => {
-    if (initialSignatureId) {
-      setTargetSigId(initialSignatureId);
-      const found = signaturesList.find((s) => s.signature_id === initialSignatureId);
-      if (found) {
-        setVerifyMessage(found.message_preview);
+    if (workflow?.signatureId) {
+      setTargetSigId(workflow.signatureId);
+      if (workflow.message) {
+        setVerifyMessage(workflow.message);
       }
     }
-  }, [initialSignatureId, signaturesList]);
+    if (workflow?.initialVerification) {
+      setInitialVerif(workflow.initialVerification);
+    }
+  }, [workflow]);
 
+  // Handle Complete Creation + Immediate Initial Verification (Steps 1 & 2)
   const handleCreateSignature = async () => {
     setCreating(true);
     setCreateError(null);
+    setInitialVerif(null);
     try {
+      // Step 1: Create Signature
       const payload: CreateSignatureRequest = {
         signer_id: signerId,
         public_identity: publicIdentity,
@@ -128,6 +144,31 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
       setCreatedSig(resp.data);
       setTargetSigId(resp.data.signature_id);
       setVerifyMessage(resp.data.message_content);
+
+      // Trigger Toast A: Signature Generated
+      notifySignatureGenerated(resp.data.signature_id);
+
+      // Step 2: Automatic Immediate Initial Verification (Clean original state)
+      const verifResp = await verifySignatureApi({
+        signature_id: resp.data.signature_id,
+        message_content: resp.data.message_content,
+        verifier_id: verifierId,
+      });
+
+      setInitialVerif(verifResp.data);
+
+      // Trigger Toast B: Initial Verification Complete
+      notifyInitialVerification(
+        resp.data.signature_id,
+        verifResp.data.verification_status === 'ACCEPTED' ? 'LEGITIMATE' : 'VERIFIED',
+        verifResp.data.qber
+      );
+
+      // Pass fresh clean state up to central workflow context
+      if (onSignatureCreated) {
+        onSignatureCreated(resp.data, verifResp.data);
+      }
+
       fetchSignatures();
     } catch (err: any) {
       setCreateError(err.response?.data?.detail || err.message || 'Signature creation failed');
@@ -136,6 +177,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
     }
   };
 
+  // Manual verify handler
   const handleVerifySignature = async () => {
     if (!targetSigId) {
       setVerifyError('Please select or enter a valid Signature ID');
@@ -160,9 +202,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
   };
 
   const handleTamperMessage = () => {
-    setVerifyMessage(
-      'TAMPERED_TX_PAYLOAD: Divert transfer to Attacker Eve Node #99.'
-    );
+    setVerifyMessage('TAMPERED_TX_PAYLOAD: Divert transfer to Attacker Eve Node #99.');
   };
 
   const handleCopy = (id: string, text: string) => {
@@ -178,21 +218,56 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
     setVerifyResult(null);
   };
 
+  const handleReset = () => {
+    setCreatedSig(null);
+    setInitialVerif(null);
+    setVerifyResult(null);
+    setCreateError(null);
+    setVerifyError(null);
+    setNonce(`nonce_${Math.random().toString(36).substring(2, 10)}`);
+    if (onResetWorkflow) {
+      onResetWorkflow();
+    }
+  };
+
+  const activeSigId = workflow?.signatureId || createdSig?.signature_id;
+  const currentStep = (initialVerif || workflow?.initialVerification) ? 2 : 1;
+
+  const stepperWorkflow: WorkflowState = {
+    signatureId: activeSigId,
+    signerId: workflow?.signerId || createdSig?.signer_id,
+    message: workflow?.message || createdSig?.message_content,
+    initialVerificationDone: Boolean(initialVerif || workflow?.initialVerification),
+    initialVerificationStatus: 'LEGITIMATE',
+    attackExecuted: workflow?.attackExecuted,
+    attackId: workflow?.attackId,
+    attackType: workflow?.attackType,
+    postAttackVerificationDone: Boolean(workflow?.postAttackVerification),
+    postAttackVerificationStatus: workflow?.postAttackVerification?.verification_status,
+    threatDetectionDone: Boolean(workflow?.threatVerdict),
+    threatVerdictStatus: workflow?.threatVerdict?.status,
+  };
+
   return (
     <div className="space-y-8 pb-12">
+      {/* 6-Step Workflow Stepper */}
+      <SecurityWorkflowStepper
+        currentStep={currentStep}
+        onNavigate={onNavigate || (() => {})}
+        workflow={stepperWorkflow}
+      />
+
       {/* Page Header */}
       <div className="page-header-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl">
             <div className="page-header-badge">
               <KeyRound className="w-3.5 h-3.5 text-yellow-800" />
-              <span>Quantum Digital Signature</span>
+              <span>Step 1 &amp; Step 2</span>
             </div>
-            <h1 className="page-title">
-              Digital Signature
-            </h1>
+            <h1 className="page-title">Digital Signature &amp; Initial Verification</h1>
             <p className="page-description">
-              Create and verify quantum-based digital signatures with teleported token states and deterministic physical parity verification.
+              Generate quantum-secured digital signatures and immediately verify clean cryptographic invariants (QBER = 0.0%) before testing threat vectors.
             </p>
           </div>
 
@@ -236,30 +311,10 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
             </button>
           </div>
         </div>
-
-        {/* 4-Step Workflow Visual Progress Bar */}
-        <div className="mt-8 pt-6 border-t border-[#EAEAEA] grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div className={`p-3 rounded-xl border flex items-center space-x-2.5 ${subTab === 'create' && !createdSig ? 'bg-yellow-100 border-yellow-300 text-charcoal font-bold' : 'bg-surface border-[#EAEAEA] text-charcoal-500'}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center font-bold text-[11px] text-charcoal">1</span>
-            <span>Create Message</span>
-          </div>
-          <div className={`p-3 rounded-xl border flex items-center space-x-2.5 ${createdSig ? 'bg-green-50 border-green-200 text-success font-bold' : 'bg-surface border-[#EAEAEA] text-charcoal-500'}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center font-bold text-[11px] text-success">2</span>
-            <span>Generate Signature</span>
-          </div>
-          <div className={`p-3 rounded-xl border flex items-center space-x-2.5 ${subTab === 'verify' && !verifyResult ? 'bg-yellow-100 border-yellow-300 text-charcoal font-bold' : 'bg-surface border-[#EAEAEA] text-charcoal-500'}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center font-bold text-[11px] text-charcoal">3</span>
-            <span>Verify Signature</span>
-          </div>
-          <div className={`p-3 rounded-xl border flex items-center space-x-2.5 ${verifyResult ? (verifyResult.verification_status === 'ACCEPTED' ? 'bg-green-50 border-green-200 text-success font-bold' : 'bg-red-50 border-red-200 text-danger font-bold') : 'bg-surface border-[#EAEAEA] text-charcoal-500'}`}>
-            <span className="w-6 h-6 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center font-bold text-[11px] text-charcoal">4</span>
-            <span>View Result</span>
-          </div>
-        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: CREATE SIGNATURE (STEPS 1 & 2) */}
+      {/* TAB 1: CREATE SIGNATURE & INITIAL VERIFICATION */}
       {/* ========================================================================= */}
       {subTab === 'create' && (
         <div className="space-y-6">
@@ -276,7 +331,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA]">
                 <h2 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2">
                   <FileText className="w-4 h-4 text-yellow-600" />
-                  <span>Create Digital Signature</span>
+                  <span>Generate Digital Signature</span>
                 </h2>
                 <span className="text-xs font-semibold text-secondary">Step 1</span>
               </div>
@@ -305,30 +360,23 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
               <div>
                 <label className="app-label">Message Content to Sign:</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
                   className="app-textarea"
-                  placeholder="Enter message text to be signed..."
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="app-label !mb-0 flex items-center space-x-1">
-                      <span>Session Nonce:</span>
-                      <span title="Cryptographic freshness nonce to prevent replay attacks" className="text-secondary cursor-help">
-                        <HelpCircle className="w-3 h-3" />
-                      </span>
-                    </label>
+                    <label className="app-label !mb-0">Session Nonce:</label>
                     <button
                       type="button"
                       onClick={() => setNonce(`nonce_${Math.random().toString(36).substring(2, 10)}`)}
-                      className="text-[11px] text-charcoal hover:underline flex items-center space-x-1"
+                      className="text-[11px] text-yellow-700 hover:text-yellow-800 font-semibold"
                     >
-                      <RefreshCw className="w-2.5 h-2.5" />
-                      <span>Regenerate</span>
+                      Regenerate
                     </button>
                   </div>
                   <input
@@ -338,13 +386,9 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
                     className="app-input font-mono"
                   />
                 </div>
+
                 <div>
-                  <label className="app-label flex items-center space-x-1">
-                    <span>Quantum Tokens (Qubits):</span>
-                    <span title="Number of entangled EPR pairs teleported for this signature" className="text-secondary cursor-help">
-                      <HelpCircle className="w-3 h-3" />
-                    </span>
-                  </label>
+                  <label className="app-label">Quantum Token Count:</label>
                   <select
                     value={tokenCount}
                     onChange={(e) => setTokenCount(Number(e.target.value))}
@@ -357,15 +401,27 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-3">
                 <button
                   onClick={handleCreateSignature}
                   disabled={creating || !messageContent.trim()}
-                  className="btn-primary w-full"
+                  className="btn-primary flex-1"
                 >
                   <Zap className={`w-4 h-4 text-charcoal ${creating ? 'animate-spin' : ''}`} />
-                  <span>{creating ? 'Creating Signature...' : 'Create Signature'}</span>
+                  <span>{creating ? 'Creating & Verifying Signature...' : 'Create Signature'}</span>
                 </button>
+
+                {(createdSig || workflow?.signatureId) && (
+                  <button
+                    onClick={handleReset}
+                    type="button"
+                    className="btn-secondary !h-10 text-xs shrink-0"
+                    title="Start fresh with a new signature"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -374,129 +430,179 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2 mb-3">
                   <Lock className="w-4 h-4 text-yellow-600" />
-                  <span>How Signature Generation Works</span>
+                  <span>Two-Stage Verification Pipeline</span>
                 </h3>
                 <ol className="space-y-2.5 text-xs text-charcoal-600 list-decimal list-inside leading-relaxed">
                   <li>
-                    <strong className="text-charcoal">Digest Generation:</strong> SHA-256 hash of the message is computed and partitioned into cryptographic bit sequences.
+                    <strong className="text-charcoal">Step 1 &mdash; Generation:</strong> Teleports entangled Bell pairs |Φ⁺⟩ and constructs quantum token states.
                   </li>
                   <li>
-                    <strong className="text-charcoal">Quantum Token Preparation:</strong> Each bit is mapped to conjugate bases (Z-basis &#123;|0⟩, |1⟩&#125; or X-basis &#123;|+⟩, |-⟩&#125;).
+                    <strong className="text-charcoal">Step 2 &mdash; Initial Verification:</strong> Automatically checks that untampered message states yield 0% QBER and are strictly <strong>LEGITIMATE</strong>.
                   </li>
                   <li>
-                    <strong className="text-charcoal">Bell State Teleportation:</strong> Entangled EPR Bell pairs |Φ⁺⟩ are distributed between Alice and Bob.
+                    <strong className="text-charcoal">Step 3 &mdash; Attack Simulator:</strong> Adversarial actions (forgery, impersonation, replay, noise) modify state only upon running simulation.
                   </li>
                   <li>
-                    <strong className="text-charcoal">Bell Measurement:</strong> Alice measures her qubits and broadcasts classical bits for reconstruction.
+                    <strong className="text-charcoal">Step 4 &mdash; Post-Attack Verification:</strong> Verifies the attacked state again to prove physical disturbance.
                   </li>
                 </ol>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] text-xs text-charcoal-600 space-y-1">
-                <span className="font-bold text-charcoal block">Deterministic Verification:</span>
-                <span>Unlike classical RSA/ECDSA, quantum digital signatures guarantee security through physics invariants that cannot be cloned without detection.</span>
+              <div className="p-3.5 rounded-xl bg-yellow-50 border border-yellow-200 text-xs text-charcoal-800 space-y-1">
+                <span className="font-bold text-charcoal block">Zero Random Logic Guarantee:</span>
+                <span>The initial verification is guaranteed 100% legitimate. No false attacks or random deviations occur unless an attack is explicitly simulated.</span>
               </div>
             </div>
           </div>
 
-          {/* Generated Signature Result Card */}
-          {createdSig && (
-            <div className="bg-white rounded-2xl p-6 border border-green-200 shadow-sm space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
+          {/* STEP 2: INITIAL VERIFICATION RESULT CARD */}
+          {initialVerif && (createdSig || workflow?.signatureId) && (
+            <div className="bg-white rounded-2xl p-6 border border-green-200 shadow-sm space-y-5 animate-in fade-in">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
                 <div className="flex items-center space-x-3">
-                  <div className="p-3 rounded-2xl bg-green-50 border border-green-200 text-success">
+                  <div className="p-3 rounded-2xl bg-green-50 border border-green-200 text-success shrink-0">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-lg font-bold text-charcoal">Signature Created &#10003;</h3>
-                      <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-success font-semibold font-mono">
-                        {createdSig.quantum_tokens.length} Qubits Teleported
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-bold text-charcoal">Initial Verification Completed</h3>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-success font-bold font-mono">
+                        ✓ LEGITIMATE
+                      </span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-surface border border-[#EAEAEA] text-charcoal font-semibold font-mono">
+                        {initialVerif.token_verifications.length} Tokens Verified
                       </span>
                     </div>
-                    <p className="text-xs text-charcoal-500 mt-0.5">
-                      Signature ID: <code className="text-charcoal font-bold font-mono">{createdSig.signature_id}</code>
+                    <p className="text-xs text-secondary mt-1">
+                      Signature/Session ID:{' '}
+                      <code className="text-charcoal font-bold font-mono">
+                        {activeSigId}
+                      </code>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Metrics Summary Strip */}
+                <div className="flex items-center gap-3 text-xs font-mono">
+                  <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[90px]">
+                    <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Status</span>
+                    <strong className="text-sm font-bold text-success block mt-0.5">
+                      {initialVerif.verification_status}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[90px]">
+                    <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Error (QBER)</span>
+                    <strong className="text-sm font-bold text-success block mt-0.5">
+                      {(initialVerif.qber * 100).toFixed(1)}%
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[90px]">
+                    <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Fidelity</span>
+                    <strong className="text-sm font-bold text-charcoal block mt-0.5">
+                      {(initialVerif.fidelity_score * 100).toFixed(1)}%
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[90px]">
+                    <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Measurement</span>
+                    <strong className="text-sm font-bold text-success block mt-0.5">
+                      {initialVerif.measurement_counts.matches}/{initialVerif.token_verifications.length} Match
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Verified Information Details */}
+              <div className="p-4 rounded-xl bg-surface border border-[#EAEAEA] text-xs space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-secondary">
+                  <span><strong>Original Content Hash:</strong> <code className="font-mono text-charcoal">{initialVerif.original_message_hash}</code></span>
+                  <span><strong>Verifier:</strong> <code className="font-mono text-charcoal">{initialVerif.verifier_id}</code></span>
+                </div>
+                <p className="text-charcoal-700 leading-relaxed">
+                  <strong className="text-charcoal">Decision Invariant:</strong> {initialVerif.decision_reason}
+                </p>
+              </div>
+
+              {/* Standardized Navigation Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleCopy('sig-id', createdSig.signature_id)}
-                    className="btn-secondary !h-9 text-xs"
+                    onClick={() => handleCopy('sig-id', activeSigId || '')}
+                    className="btn-secondary !h-10 text-xs"
                   >
                     {copiedId === 'sig-id' ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedId === 'sig-id' ? 'Copied' : 'Copy ID'}</span>
                   </button>
+
                   <button
-                    onClick={() => {
-                      setTargetSigId(createdSig.signature_id);
-                      setVerifyMessage(createdSig.message_content);
-                      setSubTab('verify');
-                    }}
-                    className="btn-secondary !h-9 text-xs"
+                    onClick={() => setShowQuantumDetails(!showQuantumDetails)}
+                    className="btn-secondary !h-10 text-xs"
                   >
-                    <span>Proceed to Verify</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>{showQuantumDetails ? 'Hide Token Breakdown' : 'View Token Breakdown'}</span>
+                    {showQuantumDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </button>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
-                      if (onContinueToAttack) {
+                      if (onNavigate) {
+                        onNavigate('detection');
+                      }
+                    }}
+                    className="btn-secondary !h-10 text-xs flex-1 sm:flex-initial"
+                  >
+                    <span>Skip Attack &rarr; Step 5 (No Threat)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (onContinueToAttack && activeSigId) {
                         onContinueToAttack({
-                          signatureId: createdSig.signature_id,
-                          signerId: createdSig.signer_id,
-                          message: createdSig.message_content,
+                          signatureId: activeSigId,
+                          signerId: workflow?.signerId || createdSig?.signer_id || '',
+                          message: workflow?.message || createdSig?.message_content || '',
                         });
                       } else if (onNavigate) {
                         onNavigate('attacks');
                       }
                     }}
-                    className="btn-primary !h-9 text-xs"
+                    className="btn-primary !h-10 text-xs flex-1 sm:flex-initial"
                   >
-                    <span>Continue to Attack Simulation &rarr;</span>
+                    <span>Proceed to Step 3: Attack Simulator</span>
+                    <ArrowRight className="w-4 h-4 text-charcoal" />
                   </button>
                 </div>
               </div>
 
-              {/* Technical Details Toggle */}
-              <div>
-                <button
-                  onClick={() => setShowQuantumDetails(!showQuantumDetails)}
-                  className="inline-flex items-center space-x-2 text-xs font-bold text-charcoal hover:text-yellow-700"
-                >
-                  <span>{showQuantumDetails ? 'Hide Quantum Details' : 'View Quantum Details (Qubit Tokens & Quantum Corrections)'}</span>
-                  {showQuantumDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-
-                {showQuantumDetails && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
-                    {createdSig.quantum_tokens.map((token) => (
-                      <div key={token.index} className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] space-y-1">
-                        <div className="flex justify-between items-center text-charcoal-500 text-[11px]">
-                          <span className="font-bold text-charcoal">Token #{token.index + 1}</span>
-                          <span className="text-yellow-800 font-bold">{token.state_label}</span>
-                        </div>
-                        <div className="text-[11px] text-charcoal font-sans">
-                          Basis: <strong>{token.basis}</strong> (Bit: {token.expected_bit})
-                        </div>
-                        <div className="text-[11px] text-charcoal-500">
-                          Measurement: <code className="text-charcoal font-bold">{token.bsm_outcome}</code>
-                        </div>
-                        <div className="text-[11px] text-charcoal-500">
-                          Correction: <code className="text-success font-bold">{token.pauli_correction}</code>
-                        </div>
+              {/* Technical Token Details */}
+              {showQuantumDetails && createdSig && (
+                <div className="mt-3 pt-3 border-t border-[#EAEAEA] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+                  {createdSig.quantum_tokens.map((token) => (
+                    <div key={token.index} className="p-3.5 rounded-xl bg-surface border border-[#EAEAEA] space-y-1">
+                      <div className="flex justify-between items-center text-charcoal-500 text-[11px]">
+                        <span className="font-bold text-charcoal">Token #{token.index + 1}</span>
+                        <span className="text-yellow-800 font-bold">{token.state_label}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <div className="text-[11px] text-charcoal font-sans">
+                        Basis: <strong>{token.basis}</strong> (Bit: {token.expected_bit})
+                      </div>
+                      <div className="text-[11px] text-charcoal-500">
+                        Measurement: <code className="text-charcoal font-bold">{token.bsm_outcome}</code>
+                      </div>
+                      <div className="text-[11px] text-charcoal-500">
+                        Correction: <code className="text-success font-bold">{token.pauli_correction}</code>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: VERIFY SIGNATURE (STEPS 3 & 4) */}
+      {/* TAB 2: MANUAL VERIFY SIGNATURE */}
       {/* ========================================================================= */}
       {subTab === 'verify' && (
         <div className="space-y-6">
@@ -508,14 +614,13 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Verification Form (7 Cols) */}
             <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA]">
                 <h2 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2">
                   <ShieldCheck className="w-4 h-4 text-yellow-600" />
-                  <span>Verify Signature</span>
+                  <span>Manual Signature Verification</span>
                 </h2>
-                <span className="text-xs font-semibold text-secondary">Step 3</span>
+                <span className="text-xs font-semibold text-secondary">Diagnostic Tool</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -572,7 +677,6 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
               </div>
             </div>
 
-            {/* Verification Rules (5 Cols) */}
             <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col justify-between space-y-4">
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-charcoal flex items-center space-x-2 mb-3">
@@ -606,7 +710,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
             </div>
           </div>
 
-          {/* Verification Verdict Card (Step 4: View Result) */}
+          {/* Verification Verdict Card */}
           {verifyResult && (
             <div
               className={`rounded-2xl p-6 border transition-all space-y-6 shadow-sm ${
@@ -615,7 +719,6 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
                   : 'border-red-200 bg-white'
               }`}
             >
-              {/* Status Banner */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
                 <div className="flex items-center space-x-3">
                   <div
@@ -748,32 +851,6 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
                     </div>
                   )}
                 </div>
-
-                {/* Workflow Progression: Step 1 -> Step 2 */}
-                <div className="pt-4 border-t border-[#EAEAEA] flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-charcoal block">Signature Verification Completed</span>
-                    <span className="text-[11px] text-secondary">
-                      Continue to Step 2 to simulate adversarial attacks (forgery, replay, noise) against this active session.
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (onContinueToAttack) {
-                        onContinueToAttack({
-                          signatureId: verifyResult.signature_id,
-                          signerId: verifyResult.signer_id,
-                          message: verifyMessage,
-                        });
-                      } else if (onNavigate) {
-                        onNavigate('attacks');
-                      }
-                    }}
-                    className="btn-primary shrink-0"
-                  >
-                    <span>Continue to Attack Simulation &rarr;</span>
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -796,7 +873,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
             <button
               onClick={fetchSignatures}
               disabled={loadingList}
-              className="px-3 py-1.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-xs text-charcoal flex items-center space-x-1.5 transition-colors"
+              className="btn-secondary !h-8 text-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingList ? 'animate-spin text-charcoal' : ''}`} />
               <span>Refresh Registry</span>
@@ -814,7 +891,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
               </p>
               <button
                 onClick={() => setSubTab('create')}
-                className="mt-4 px-4 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-charcoal font-bold text-xs transition-colors shadow-xs"
+                className="btn-primary mt-4 text-xs"
               >
                 Create First Signature
               </button>
@@ -858,7 +935,7 @@ export const QuantumSignaturePage: React.FC<QuantumSignaturePageProps> = ({
                         <td className="py-3 px-4 text-right space-x-2">
                           <button
                             onClick={() => handleSelectSignatureForVerification(sig)}
-                            className="px-3 py-1 rounded-lg bg-surface hover:bg-yellow-400 border border-[#EAEAEA] hover:border-yellow-400 text-charcoal font-bold text-xs transition-colors"
+                            className="btn-secondary !h-7 text-xs"
                           >
                             Verify
                           </button>

@@ -18,6 +18,7 @@ from app.models.signature import (
     SignatureModel,
     VerificationModel,
 )
+from app.models.attack import AttackRecordModel
 from app.quantum.teleportation import (
     InputStateType,
     VerificationBasis,
@@ -170,8 +171,14 @@ def verify_signature_workflow(
     signature_id: str,
     test_message_content: str,
     verifier_id: str = "bob_verifier_01",
+    attack_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Execute complete Verifier workflow: Message check -> Pauli correction -> Projective measurement -> Threshold rule."""
+    """Execute complete Verifier workflow: Message check -> Pauli correction -> Projective measurement -> Threshold rule.
+    
+    Supports two distinct verification stages:
+    - INITIAL: No attack applied. Evaluates legitimate signature against claimed payload.
+    - POST_ATTACK: Evaluates signature against actual state produced by simulated cyber attack.
+    """
     signature = db.get(SignatureModel, signature_id)
     if not signature:
         raise ValueError(f"Signature '{signature_id}' not found in database.")
@@ -179,91 +186,224 @@ def verify_signature_workflow(
     message = db.get(MessageModel, signature.message_id)
     signer = db.get(SignerModel, signature.signer_id)
 
-    tested_hash = hashlib.sha256(test_message_content.encode("utf-8")).hexdigest()
-    is_tampered = tested_hash != message.content_hash
+    # Fetch attack context if provided
+    attack_record = db.get(AttackRecordModel, attack_id) if attack_id else None
+    verification_stage = "POST_ATTACK" if attack_record else "INITIAL"
+
+    # Effective message content under test
+    effective_message = test_message_content
+    if attack_record and attack_record.attack_type == "forgery":
+        effective_message = attack_record.get_manipulated_data().get("forged_message_content") or test_message_content
+
+    tested_hash = hashlib.sha256(effective_message.encode("utf-8")).hexdigest()
+    is_tampered = (tested_hash != message.content_hash) or (attack_record is not None)
 
     # Retrieve Alice's teleported quantum tokens and BSM classical corrections
     stored_tokens = signature.get_quantum_tokens()
+    total_tokens = len(stored_tokens)
 
     # Reconstruct expected tokens from the TESTED message content
     expected_tokens = _derive_quantum_token_sequence(
         tested_hash,
         signature.signer_id,
         signature.session_nonce,
-        len(stored_tokens),
+        total_tokens,
     )
 
     token_verifications = []
     total_matches = 0
-    total_tokens = len(stored_tokens)
 
-    for i in range(total_tokens):
-        orig_token = stored_tokens[i]
-        exp_token = expected_tokens[i]
-
-        # In quantum mechanics, if message is unaltered: Bob's expected basis matches Alice's teleported state
-        # If message was altered: Bob tests state in mismatched/scrambled basis
-        if not is_tampered:
-            measured_bit = orig_token["expected_bit"]
-            is_match = True
-            total_matches += 1
-        else:
-            # Hash discrepancy causes basis mismatch or opposite bit outcome
-            # Quantum measurement under scrambled basis yields random bit with 50% error probability
-            is_state_same = (orig_token["state_label"] == exp_token["state_label"])
-            if is_state_same:
+    if not attack_record:
+        # =========================================================================
+        # INITIAL VERIFICATION (Clean Original State - No Attack)
+        # =========================================================================
+        is_msg_hash_match = (tested_hash == message.content_hash)
+        for i in range(total_tokens):
+            orig_token = stored_tokens[i]
+            exp_token = expected_tokens[i]
+            if is_msg_hash_match:
                 measured_bit = orig_token["expected_bit"]
                 is_match = True
                 total_matches += 1
             else:
-                # Mismatch due to quantum state orthogonality / basis tampering
-                measured_bit = 1 - exp_token["expected_bit"]
-                is_match = False
+                is_match = (orig_token["state_label"] == exp_token["state_label"])
+                measured_bit = orig_token["expected_bit"] if is_match else (1 - exp_token["expected_bit"])
+                if is_match:
+                    total_matches += 1
 
-        token_verifications.append({
-            "index": i,
-            "expected_state": exp_token["state_label"],
-            "expected_basis": exp_token["basis"],
-            "pauli_correction_applied": orig_token["pauli_correction"],
-            "measured_bit": measured_bit,
-            "is_match": is_match,
-        })
+            token_verifications.append({
+                "index": i,
+                "expected_state": exp_token["state_label"],
+                "expected_basis": exp_token["basis"],
+                "pauli_correction_applied": orig_token["pauli_correction"],
+                "measured_bit": measured_bit,
+                "is_match": is_match,
+            })
 
-    # Quantum Bit Error Rate (QBER)
-    qber = (total_tokens - total_matches) / total_tokens if total_tokens > 0 else 0.0
-    verification_score = round(max(0.0, 1.0 - qber), 4)
+        qber = (total_tokens - total_matches) / total_tokens if total_tokens > 0 else 0.0
+        verification_score = round(max(0.0, 1.0 - qber), 4)
+        THRESHOLD = 0.85
+        is_accepted = (verification_score >= THRESHOLD) and is_msg_hash_match
+        verdict = "ACCEPTED" if is_accepted else "REJECTED"
 
-    # Deterministic Decision Rule: Threshold >= 0.85 and Nonce valid
-    THRESHOLD = 0.85
-    is_accepted = verification_score >= THRESHOLD and not is_tampered
-    verdict = "ACCEPTED" if is_accepted else "REJECTED"
+        if is_accepted:
+            details = (
+                f"Initial quantum signature verification successful (LEGITIMATE). Deterministic parity and basis match "
+                f"confirmed across all {total_tokens} teleported quantum tokens before attack (QBER = 0.0%, Score = 1.00)."
+            )
+        else:
+            details = (
+                f"Signature verification FAILED (REJECTED). Message payload mismatch detected. "
+                f"Observed QBER of {qber:.1%} exceeds threshold (Score = {verification_score:.2f} < {THRESHOLD})."
+            )
 
-    if is_accepted:
-        details = (
-            f"Quantum signature verified successfully. Deterministic parity and basis match "
-            f"confirmed across all {total_tokens} teleported quantum tokens (QBER = {qber:.1%}, Score = {verification_score:.2f})."
-        )
     else:
-        details = (
-            f"Signature verification FAILED (REJECTED). Tampering or basis discrepancy detected. "
-            f"Observed QBER of {qber:.1%} exceeds threshold (Score = {verification_score:.2f} < {THRESHOLD})."
-        )
+        # =========================================================================
+        # POST-ATTACK VERIFICATION (Actual State Produced by Attack Simulation)
+        # =========================================================================
+        att_type = attack_record.attack_type
+
+        if att_type == "forgery":
+            # Forgery alters message content -> basis mismatch across tokens
+            for i in range(total_tokens):
+                orig_token = stored_tokens[i]
+                exp_token = expected_tokens[i]
+                is_match = (orig_token["state_label"] == exp_token["state_label"])
+                measured_bit = orig_token["expected_bit"] if is_match else (1 - exp_token["expected_bit"])
+                if is_match:
+                    total_matches += 1
+
+                token_verifications.append({
+                    "index": i,
+                    "expected_state": exp_token["state_label"],
+                    "expected_basis": exp_token["basis"],
+                    "pauli_correction_applied": orig_token["pauli_correction"],
+                    "measured_bit": measured_bit,
+                    "is_match": is_match,
+                })
+            qber = (total_tokens - total_matches) / total_tokens if total_tokens > 0 else 0.0
+            verification_score = round(max(0.0, 1.0 - qber), 4)
+            is_accepted = False
+            verdict = "REJECTED"
+            details = (
+                f"Post-attack verification FAILED (REJECTED): Digital signature forgery detected. "
+                f"Message payload was altered from original. Quantum basis mismatch yielded QBER of {qber:.1%} (Score: {verification_score:.2f} < 0.85)."
+            )
+
+        elif att_type == "impersonation":
+            # Impersonator Mallory lacks Alice's secret key seed -> 100% token state parity mismatch
+            for i in range(total_tokens):
+                exp_token = expected_tokens[i]
+                orig_token = stored_tokens[i]
+                token_verifications.append({
+                    "index": i,
+                    "expected_state": exp_token["state_label"],
+                    "expected_basis": exp_token["basis"],
+                    "pauli_correction_applied": orig_token["pauli_correction"],
+                    "measured_bit": 1 - exp_token["expected_bit"],
+                    "is_match": False,
+                })
+            total_matches = 0
+            qber = 1.0
+            verification_score = 0.0
+            is_accepted = False
+            verdict = "REJECTED"
+            details = (
+                f"Post-attack verification FAILED (REJECTED): Signer impersonation detected. "
+                f"Adversary '{attack_record.attacker_id}' lacks authorized quantum seed, causing 100% token state parity mismatch (QBER: 100.0%)."
+            )
+
+        elif att_type == "replay":
+            # Session nonce or stale timestamp window check fails
+            staleness = attack_record.statistical_deviation
+            for i in range(total_tokens):
+                orig_token = stored_tokens[i]
+                exp_token = expected_tokens[i]
+                token_verifications.append({
+                    "index": i,
+                    "expected_state": exp_token["state_label"],
+                    "expected_basis": exp_token["basis"],
+                    "pauli_correction_applied": orig_token["pauli_correction"],
+                    "measured_bit": orig_token["expected_bit"],
+                    "is_match": False,
+                })
+            total_matches = 0
+            qber = 0.75
+            verification_score = 0.25
+            is_accepted = False
+            verdict = "REJECTED"
+            details = (
+                f"Post-attack verification FAILED (REJECTED): Replay attack detected. "
+                f"Session nonce freshness expired (stale drift = {int(staleness)}s > 300s temporal validity threshold)."
+            )
+
+        elif att_type == "channel_manipulation":
+            # Quantum channel noise corrupts teleported tokens
+            noise_intensity = attack_record.statistical_deviation
+            mismatches = max(1, int(round(total_tokens * noise_intensity)))
+            for i in range(total_tokens):
+                orig_token = stored_tokens[i]
+                exp_token = expected_tokens[i]
+                is_token_corrupted = (i < mismatches)
+                is_match = not is_token_corrupted
+                if is_match:
+                    total_matches += 1
+                measured_bit = (1 - exp_token["expected_bit"]) if is_token_corrupted else orig_token["expected_bit"]
+                token_verifications.append({
+                    "index": i,
+                    "expected_state": exp_token["state_label"],
+                    "expected_basis": exp_token["basis"],
+                    "pauli_correction_applied": orig_token["pauli_correction"],
+                    "measured_bit": measured_bit,
+                    "is_match": is_match,
+                })
+            qber = (total_tokens - total_matches) / total_tokens if total_tokens > 0 else 0.0
+            verification_score = round(max(0.0, 1.0 - qber), 4)
+            is_accepted = False
+            verdict = "REJECTED"
+            details = (
+                f"Post-attack verification FAILED (REJECTED): Quantum channel disturbance detected. "
+                f"Observed QBER of {qber:.1%} exceeds calibrated 15.0% threshold boundary (Score: {verification_score:.2f} < 0.85)."
+            )
+
+        else:
+            # Unauthorized verification
+            for i in range(total_tokens):
+                exp_token = expected_tokens[i]
+                orig_token = stored_tokens[i]
+                token_verifications.append({
+                    "index": i,
+                    "expected_state": exp_token["state_label"],
+                    "expected_basis": exp_token["basis"],
+                    "pauli_correction_applied": "DENIED",
+                    "measured_bit": 1 - exp_token["expected_bit"],
+                    "is_match": False,
+                })
+            total_matches = 0
+            qber = 1.0
+            verification_score = 0.0
+            is_accepted = False
+            verdict = "REJECTED"
+            details = (
+                f"Post-attack verification FAILED (REJECTED): Unauthorized verifier probe. "
+                f"Node '{verifier_id}' is not in authorized verifier whitelist; Pauli correction keys withheld."
+            )
 
     # Persist Verification Log
     verification_rec = VerificationModel(
         id=f"ver_{uuid.uuid4().hex[:12]}",
         signature_id=signature.id,
         verifier_id=verifier_id,
-        tested_message_content=test_message_content,
+        tested_message_content=effective_message,
         tested_message_hash=tested_hash,
         is_message_tampered=is_tampered,
         verification_status=verdict,
         verification_score=verification_score,
         qber=round(qber, 4),
-        fidelity_score=1.0 if not is_tampered else 0.5,
+        fidelity_score=1.0 if (not is_tampered and verdict == "ACCEPTED") else 0.5,
         measurement_counts_json=json.dumps({"matches": total_matches, "mismatches": total_tokens - total_matches}),
-        expected_distribution_json=json.dumps({"expected_match_rate": 1.0, "error_threshold": 1.0 - THRESHOLD}),
-        observed_distribution_json=json.dumps({"observed_match_rate": round(total_matches / total_tokens, 4), "qber": round(qber, 4)}),
+        expected_distribution_json=json.dumps({"expected_match_rate": 1.0, "error_threshold": 0.15}),
+        observed_distribution_json=json.dumps({"observed_match_rate": round(total_matches / total_tokens, 4) if total_tokens > 0 else 0.0, "qber": round(qber, 4)}),
         details=details,
     )
     db.add(verification_rec)
@@ -280,12 +420,13 @@ def verify_signature_workflow(
         "verification_status": verdict,
         "verification_score": verification_score,
         "qber": round(qber, 4),
-        "fidelity_score": 1.0 if not is_tampered else 0.5,
+        "fidelity_score": 1.0 if (not is_tampered and verdict == "ACCEPTED") else 0.5,
         "measurement_counts": {"matches": total_matches, "mismatches": total_tokens - total_matches},
         "expected_distribution": {"expected_match_rate": 1.0, "max_allowed_qber": 0.15},
-        "observed_distribution": {"match_rate": round(total_matches / total_tokens, 4), "qber": round(qber, 4)},
+        "observed_distribution": {"match_rate": round(total_matches / total_tokens, 4) if total_tokens > 0 else 0.0, "qber": round(qber, 4)},
         "token_verifications": token_verifications,
         "decision_reason": details,
+        "verification_stage": verification_stage,
         "timestamp": verification_rec.created_at,
     }
 

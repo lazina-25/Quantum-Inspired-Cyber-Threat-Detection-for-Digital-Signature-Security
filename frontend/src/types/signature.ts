@@ -34,6 +34,7 @@ export interface VerifySignatureRequest {
   signature_id: string;
   message_content: string;
   verifier_id: string;
+  attack_id?: string;
 }
 
 export interface TokenVerificationDetail {
@@ -54,6 +55,7 @@ export interface VerifySignatureResponse {
   tested_message_hash: string;
   is_message_tampered: boolean;
   verification_status: 'ACCEPTED' | 'REJECTED' | string;
+  verification_stage?: 'INITIAL' | 'POST_ATTACK' | string;
   verification_score: number;
   qber: number;
   fidelity_score: number;

@@ -8,38 +8,87 @@ import { ThreatDetectionPage } from './pages/ThreatDetectionPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { EventHistoryPage } from './pages/EventHistoryPage';
 import { useHealth } from './hooks/useHealth';
+import { ToastProvider } from './components/Toast';
+import { CreateSignatureResponse, VerifySignatureResponse } from './types/signature';
+import { AttackResponse } from './types/attack';
+import { ThreatAnalysisResponse } from './types/detection';
 
-interface WorkflowContext {
+export interface SecurityWorkflowContextState {
   signatureId?: string;
   signerId?: string;
   message?: string;
+  initialVerification?: VerifySignatureResponse;
+  attackExecuted?: boolean;
   attackId?: string;
   attackType?: string;
+  attackResult?: any;
+  postAttackVerification?: VerifySignatureResponse;
+  threatVerdict?: ThreatAnalysisResponse;
 }
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const { health, latencyMs, refetch, loading } = useHealth(10000);
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  const [workflowContext, setWorkflowContext] = useState<WorkflowContext>({});
+  const [workflow, setWorkflow] = useState<SecurityWorkflowContextState>({});
 
-  const handleContinueToAttack = (context: { signatureId: string; signerId: string; message: string }) => {
-    setWorkflowContext((prev) => ({
-      ...prev,
-      signatureId: context.signatureId,
-      signerId: context.signerId,
-      message: context.message,
-    }));
-    setActiveTab('attacks');
+  // 1. New signature generated and initial verification completed
+  const handleSignatureCreated = (
+    sig: CreateSignatureResponse,
+    initVerif: VerifySignatureResponse
+  ) => {
+    setWorkflow({
+      signatureId: sig.signature_id,
+      signerId: sig.signer_id,
+      message: sig.message_content,
+      initialVerification: initVerif,
+      attackExecuted: false,
+      attackId: undefined,
+      attackType: undefined,
+      attackResult: undefined,
+      postAttackVerification: undefined,
+      threatVerdict: undefined,
+    });
   };
 
-  const handleContinueToDetection = (context: { signatureId: string; attackId: string; attackType: string }) => {
-    setWorkflowContext((prev) => ({
+  // 2. Attack explicitly executed and post-attack verification completed
+  const handleAttackExecuted = (
+    attackResp: AttackResponse,
+    postVerifResp: VerifySignatureResponse
+  ) => {
+    setWorkflow((prev) => ({
       ...prev,
-      signatureId: context.signatureId,
-      attackId: context.attackId,
-      attackType: context.attackType,
+      attackExecuted: true,
+      attackId: attackResp.attack_id,
+      attackType: attackResp.attack_type,
+      attackResult: attackResp,
+      postAttackVerification: postVerifResp,
+    }));
+  };
+
+  // 3. User chooses to skip attack to test the clean/no-attack flow
+  const handleSkipAttack = () => {
+    setWorkflow((prev) => ({
+      ...prev,
+      attackExecuted: false,
+      attackId: undefined,
+      attackType: undefined,
+      attackResult: undefined,
+      postAttackVerification: prev.initialVerification, // clean verification state
     }));
     setActiveTab('detection');
+  };
+
+  // 4. Threat analysis completed
+  const handleThreatAnalyzed = (verdict: ThreatAnalysisResponse) => {
+    setWorkflow((prev) => ({
+      ...prev,
+      threatVerdict: verdict,
+    }));
+  };
+
+  // 5. Complete session reset
+  const handleResetWorkflow = () => {
+    setWorkflow({});
   };
 
   return (
@@ -56,23 +105,24 @@ export const App: React.FC = () => {
         {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
         {activeTab === 'signatures' && (
           <QuantumSignaturePage
-            onContinueToAttack={handleContinueToAttack}
+            workflow={workflow}
+            onSignatureCreated={handleSignatureCreated}
+            onResetWorkflow={handleResetWorkflow}
             onNavigate={setActiveTab}
-            initialSignatureId={workflowContext.signatureId}
           />
         )}
         {activeTab === 'attacks' && (
           <AttackSimulatorPage
-            initialSignatureId={workflowContext.signatureId}
-            onContinueToDetection={handleContinueToDetection}
+            workflow={workflow}
+            onAttackExecuted={handleAttackExecuted}
+            onSkipAttack={handleSkipAttack}
             onNavigate={setActiveTab}
           />
         )}
         {activeTab === 'detection' && (
           <ThreatDetectionPage
-            initialSignatureId={workflowContext.signatureId}
-            initialAttackId={workflowContext.attackId}
-            initialAttackType={workflowContext.attackType}
+            workflow={workflow}
+            onThreatAnalyzed={handleThreatAnalyzed}
             onNavigate={setActiveTab}
           />
         )}
@@ -87,6 +137,14 @@ export const App: React.FC = () => {
         </div>
       </footer>
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 

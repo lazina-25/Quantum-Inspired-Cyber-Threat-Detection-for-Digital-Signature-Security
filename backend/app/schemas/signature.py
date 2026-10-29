@@ -49,6 +49,7 @@ class VerifySignatureRequest(BaseModel):
     signature_id: str = Field(..., description="Target signature record ID to verify")
     message_content: str = Field(..., min_length=1, description="Claimed message content (tested against signature)")
     verifier_id: str = Field(default="bob_verifier_01", description="Verifier identity")
+    attack_id: Optional[str] = Field(default=None, description="Optional simulated attack ID for post-attack verification")
 
 
 class TokenVerificationDetail(BaseModel):
@@ -81,6 +82,7 @@ class VerifySignatureResponse(BaseModel):
     observed_distribution: Dict[str, float] = Field(..., description="Empirical measurement outcomes")
     token_verifications: List[TokenVerificationDetail] = Field(..., description="Token-by-token verification details")
     decision_reason: str = Field(..., description="Explanation of acceptance or rejection")
+    verification_stage: Optional[str] = Field(default="INITIAL", description="'INITIAL' or 'POST_ATTACK'")
     timestamp: datetime = Field(..., description="Verification timestamp")
 
 

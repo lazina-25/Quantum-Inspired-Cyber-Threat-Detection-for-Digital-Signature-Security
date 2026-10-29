@@ -64,6 +64,7 @@ def verify_signature(
             signature_id=request.signature_id,
             test_message_content=request.message_content,
             verifier_id=request.verifier_id,
+            attack_id=request.attack_id,
         )
         return VerifySignatureResponse(**result)
     except ValueError as exc:

@@ -10,7 +10,8 @@ import {
   RefreshCw,
   Sliders,
   Database,
-  Play
+  Play,
+  ArrowRight,
 } from 'lucide-react';
 import {
   AttackTypeId,
@@ -25,9 +26,12 @@ import {
   launchUnauthorizedVerificationAttackApi,
   getAttackHistoryApi,
 } from '../services/attackApi';
-import { listSignaturesApi, createSignatureApi } from '../services/signatureApi';
-import { SignatureListItem } from '../types/signature';
+import { listSignaturesApi, createSignatureApi, verifySignatureApi } from '../services/signatureApi';
+import { SignatureListItem, VerifySignatureResponse } from '../types/signature';
 import { NavTab } from '../components/Navbar';
+import { useToast } from '../components/Toast';
+import { SecurityWorkflowStepper, WorkflowState } from '../components/SecurityWorkflowStepper';
+import { SecurityWorkflowContextState } from '../App';
 
 const ATTACK_VECTORS: {
   id: AttackTypeId;
@@ -85,23 +89,36 @@ const ATTACK_VECTORS: {
   },
 ];
 
-
 interface AttackSimulatorPageProps {
+  workflow?: SecurityWorkflowContextState;
+  onAttackExecuted?: (attackResp: AttackResponse, postVerifResp: VerifySignatureResponse) => void;
+  onSkipAttack?: () => void;
+  onNavigate?: (tab: NavTab) => void;
   initialSignatureId?: string;
   onContinueToDetection?: (context: { signatureId: string; attackId: string; attackType: string }) => void;
-  onNavigate?: (tab: NavTab) => void;
 }
 
 export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
+  workflow,
+  onAttackExecuted,
+  onSkipAttack,
+  onNavigate,
   initialSignatureId,
   onContinueToDetection,
-  onNavigate,
 }) => {
+  const { notifyAttackSimulation, notifyPostAttackVerification } = useToast();
   const [selectedAttack, setSelectedAttack] = useState<AttackTypeId>('forgery');
   const [signatures, setSignatures] = useState<SignatureListItem[]>([]);
-  const [targetSigId, setTargetSigId] = useState<string>(initialSignatureId || '');
+  const [targetSigId, setTargetSigId] = useState<string>(
+    workflow?.signatureId || initialSignatureId || ''
+  );
   const [loading, setLoading] = useState<boolean>(false);
-  const [attackResult, setAttackResult] = useState<AttackResponse | null>(null);
+  const [attackResult, setAttackResult] = useState<AttackResponse | null>(
+    workflow?.attackResult || null
+  );
+  const [postAttackVerif, setPostAttackVerif] = useState<VerifySignatureResponse | null>(
+    workflow?.postAttackVerification || null
+  );
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<AttackHistoryItem[]>([]);
 
@@ -135,14 +152,26 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (workflow?.signatureId) {
+      setTargetSigId(workflow.signatureId);
+    }
+    if (workflow?.attackResult) {
+      setAttackResult(workflow.attackResult);
+    }
+    if (workflow?.postAttackVerification) {
+      setPostAttackVerif(workflow.postAttackVerification);
+    }
+  }, [workflow]);
+
   const handleCreateDemoSignature = async () => {
     try {
       const res = await createSignatureApi({
         signer_id: 'alice_signer_01',
-        public_identity: 'Alice Quantum Signer Node',
-        message_content: 'LEGITIMATE_TRANSACTION: Transfer $100,000 to Authorized Node.',
-        shots: 1024,
+        public_identity: 'Alice (Financial Division)',
+        message_content: 'SECURE_TRANSFER_AUTH_#88910: Transfer $100,000 to Authorized Node 2.',
         token_count: 4,
+        shots: 1024,
       });
       setTargetSigId(res.data.signature_id);
       loadData();
@@ -151,6 +180,7 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
     }
   };
 
+  // Explicit Attack Execution + Automatic Post-Attack Verification (Steps 3 & 4)
   const handleLaunchAttack = async () => {
     if (!targetSigId) {
       setError('Please select or create a target signature first.');
@@ -196,6 +226,35 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
       }
 
       setAttackResult(resp.data);
+
+      // Trigger Toast C: Attack Simulation Complete
+      notifyAttackSimulation(
+        activeVector.name,
+        targetSigId,
+        'EXECUTED'
+      );
+
+      // STEP 4: AUTOMATIC POST-ATTACK VERIFICATION
+      const postVerifResp = await verifySignatureApi({
+        signature_id: targetSigId,
+        message_content: selectedSig?.message_preview || workflow?.message || '',
+        verifier_id: selectedAttack === 'unauthorized_verification' ? unauthVerifierId : 'bob_verifier_01',
+        attack_id: resp.data.attack_id,
+      });
+
+      setPostAttackVerif(postVerifResp.data);
+
+      // Trigger Toast D: Post-Attack Verification Complete
+      notifyPostAttackVerification(
+        postVerifResp.data.verification_status,
+        `${postVerifResp.data.measurement_counts.matches} Matches, ${postVerifResp.data.measurement_counts.mismatches} Mismatches`
+      );
+
+      // Update central workflow state
+      if (onAttackExecuted) {
+        onAttackExecuted(resp.data, postVerifResp.data);
+      }
+
       const hist = await getAttackHistoryApi();
       setHistory(hist);
     } catch (err: any) {
@@ -205,17 +264,35 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (initialSignatureId) {
-      setTargetSigId(initialSignatureId);
-    }
-  }, [initialSignatureId]);
-
   const activeVector = ATTACK_VECTORS.find((v) => v.id === selectedAttack) || ATTACK_VECTORS[0];
   const selectedSig = signatures.find((s) => s.signature_id === targetSigId);
 
+  const currentStep = postAttackVerif ? 4 : 3;
+
+  const stepperWorkflow: WorkflowState = {
+    signatureId: targetSigId,
+    signerId: workflow?.signerId || selectedSig?.signer_id,
+    message: workflow?.message || selectedSig?.message_preview,
+    initialVerificationDone: Boolean(workflow?.initialVerification),
+    initialVerificationStatus: 'LEGITIMATE',
+    attackExecuted: Boolean(attackResult || workflow?.attackExecuted),
+    attackId: attackResult?.attack_id || workflow?.attackId,
+    attackType: attackResult?.attack_type || workflow?.attackType,
+    postAttackVerificationDone: Boolean(postAttackVerif || workflow?.postAttackVerification),
+    postAttackVerificationStatus: (postAttackVerif || workflow?.postAttackVerification)?.verification_status,
+    threatDetectionDone: Boolean(workflow?.threatVerdict),
+    threatVerdictStatus: workflow?.threatVerdict?.status,
+  };
+
   return (
     <div className="space-y-8 pb-12">
+      {/* 6-Step Workflow Stepper */}
+      <SecurityWorkflowStepper
+        currentStep={currentStep}
+        onNavigate={onNavigate || (() => {})}
+        workflow={stepperWorkflow}
+      />
+
       {/* Target Signature Context Banner */}
       {selectedSig && (
         <div className="bg-white rounded-2xl p-5 border border-[#EAEAEA] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -224,13 +301,13 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
               <Database className="w-5 h-5 text-yellow-800" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-secondary">Target Session:</span>
                 <span className="text-xs font-mono font-bold text-charcoal bg-surface px-2 py-0.5 rounded border border-[#EAEAEA]">
                   {selectedSig.signature_id}
                 </span>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-success font-mono">
-                  Verified Active
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono">
+                  Initial: ✓ LEGITIMATE
                 </span>
               </div>
               <p className="text-xs text-secondary mt-1">
@@ -239,9 +316,20 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
             </div>
           </div>
 
-          <div className="text-right text-xs text-secondary shrink-0">
-            <span className="block font-semibold text-charcoal">Testing Threat Resilience</span>
-            <span className="text-[11px] text-yellow-700 font-medium">Ready for Adversarial Injection</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (onSkipAttack) {
+                  onSkipAttack();
+                } else if (onNavigate) {
+                  onNavigate('detection');
+                }
+              }}
+              className="btn-secondary !h-9 text-xs"
+              title="Test threat detection without running an attack"
+            >
+              <span>Skip Attack (Clean Flow) &rarr;</span>
+            </button>
           </div>
         </div>
       )}
@@ -252,13 +340,11 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
           <div className="max-w-2xl">
             <div className="page-header-badge">
               <Skull className="w-3.5 h-3.5 text-yellow-800" />
-              <span>Adversarial Simulation</span>
+              <span>Step 3 &amp; Step 4</span>
             </div>
-            <h1 className="page-title">
-              Attack Simulator
-            </h1>
+            <h1 className="page-title">Attack Simulator &amp; Post-Attack Verification</h1>
             <p className="page-description">
-              Safely test how the quantum verification system responds to different adversarial cyber threats and channel disturbances.
+              Explicitly select and execute an adversarial threat scenario. No attack exists until you click "Run Simulation". Following attack execution, the signature is automatically verified a second time.
             </p>
           </div>
 
@@ -269,7 +355,7 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
               className="btn-primary"
             >
               <Play className={`w-4 h-4 fill-charcoal ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Simulating...' : 'Run Simulation'}</span>
+              <span>{loading ? 'Simulating & Verifying...' : 'Run Simulation'}</span>
             </button>
           </div>
         </div>
@@ -286,7 +372,9 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
       <div className="space-y-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-charcoal tracking-tight">1. Select Attack Scenario</h2>
-          <p className="text-xs sm:text-sm text-secondary mt-1">Choose a threat vector to simulate against a target signature session</p>
+          <p className="text-xs sm:text-sm text-secondary mt-1">
+            Click an attack card to configure parameters. Selecting a card does not launch an attack until you click "Run Simulation".
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -297,9 +385,9 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
               <button
                 key={vec.id}
                 onClick={() => setSelectedAttack(vec.id)}
-                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between h-full min-h-[140px] ${
+                className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between h-full min-h-[140px] cursor-pointer ${
                   isSelected
-                    ? 'bg-yellow-50 border-yellow-400 shadow-xs ring-1 ring-yellow-400'
+                    ? 'bg-yellow-50 border-yellow-400 shadow-xs ring-2 ring-yellow-400'
                     : 'bg-white border-[#EAEAEA] hover:border-yellow-300'
                 }`}
               >
@@ -452,7 +540,7 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
                 />
               </div>
               <div>
-                <label className="app-label">Impersonator Node Identity:</label>
+                <label className="app-label">Adversary Identifier:</label>
                 <input
                   type="text"
                   value={attackerId}
@@ -468,23 +556,23 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
             <div className="space-y-4 text-xs">
               <div>
                 <div className="flex justify-between text-charcoal-600 mb-1">
-                  <span>Replay Timestamp Offset (Drift):</span>
-                  <span className="text-charcoal font-bold font-mono">{stalenessSeconds} seconds ({(stalenessSeconds / 60).toFixed(0)} min)</span>
+                  <span>Simulated Timestamp Staleness:</span>
+                  <span className="text-charcoal font-bold font-mono">{stalenessSeconds} seconds ({Math.round(stalenessSeconds / 60)} min)</span>
                 </div>
                 <input
                   type="range"
-                  min="60"
-                  max="14400"
-                  step="300"
+                  min="600"
+                  max="86400"
+                  step="600"
                   value={stalenessSeconds}
                   onChange={(e) => setStalenessSeconds(Number(e.target.value))}
                   className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-yellow-500"
                 />
                 <div className="flex justify-between text-[10px] text-charcoal-400 mt-1">
-                  <span>1 min</span>
-                  <span>5 min (Threshold Limit)</span>
-                  <span>2 hours</span>
-                  <span>4 hours</span>
+                  <span>10 min</span>
+                  <span>1 hour</span>
+                  <span>12 hours</span>
+                  <span>24 hours (Stale)</span>
                 </div>
               </div>
             </div>
@@ -494,28 +582,22 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
           {selectedAttack === 'channel_manipulation' && (
             <div className="space-y-4 text-xs">
               <div>
-                <label className="text-charcoal font-medium block mb-2">Channel Noise Model:</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['depolarizing', 'intercept_resend', 'bit_flip', 'phase_flip'] as const).map((model) => (
-                    <button
-                      key={model}
-                      type="button"
-                      onClick={() => setNoiseType(model)}
-                      className={`p-2 rounded-xl border text-xs font-mono capitalize transition-all ${
-                        noiseType === model
-                          ? 'bg-yellow-400 text-charcoal font-bold border-yellow-400 shadow-xs'
-                          : 'bg-surface border-[#EAEAEA] text-charcoal hover:bg-yellow-50'
-                      }`}
-                    >
-                      {model.replace('_', ' ')}
-                    </button>
-                  ))}
-                </div>
+                <label className="app-label">Quantum Noise Model:</label>
+                <select
+                  value={noiseType}
+                  onChange={(e: any) => setNoiseType(e.target.value)}
+                  className="app-select"
+                >
+                  <option value="depolarizing">Depolarizing Channel (Standard Environmental Noise)</option>
+                  <option value="intercept_resend">Intercept-Resend Eavesdropping (Eve Probe)</option>
+                  <option value="bit_flip">Pauli-X Bit Flip Noise</option>
+                  <option value="phase_flip">Pauli-Z Phase Flip Noise</option>
+                </select>
               </div>
 
               <div>
                 <div className="flex justify-between text-charcoal-600 mb-1">
-                  <span>Noise Corruption Intensity (&lambda;):</span>
+                  <span>Noise / Disturbance Intensity:</span>
                   <span className="text-charcoal font-bold font-mono">{(noiseIntensity * 100).toFixed(0)}%</span>
                 </div>
                 <input
@@ -548,55 +630,95 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
               </div>
             </div>
           )}
+
+          <div className="pt-2">
+            <button
+              onClick={handleLaunchAttack}
+              disabled={loading || !targetSigId}
+              className="btn-primary w-full"
+            >
+              <Play className={`w-4 h-4 fill-charcoal ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Executing Attack & Verifying State...' : `Run ${activeVector.name} Simulation`}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Attack Results Section */}
-      {attackResult && (
-        <div className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm space-y-6">
-          {/* Header Verdict */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
+      {/* STEP 4: POST-ATTACK VERIFICATION & ATTACK RESULTS SECTION */}
+      {attackResult && postAttackVerif && (
+        <div className="bg-white rounded-2xl p-6 border border-amber-300 shadow-sm space-y-6 animate-in fade-in">
+          {/* Header Verdict: Post-Attack Verification */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#EAEAEA]">
             <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-2xl bg-yellow-100 border border-yellow-200 text-charcoal">
-                <ShieldAlert className="w-7 h-7 text-yellow-800" />
+              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-700">
+                <ShieldAlert className="w-7 h-7 text-amber-600" />
               </div>
               <div>
-                <div className="flex items-center space-x-2.5">
-                  <h3 className="text-xl sm:text-2xl font-bold text-charcoal tracking-tight">
-                    Simulation Complete
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl font-bold text-charcoal">
+                    Post-Attack Signature Verification
                   </h3>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-surface border border-[#EAEAEA] text-charcoal font-mono font-semibold">
-                    {attackResult.attack_type.toUpperCase()}
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold ${
+                      postAttackVerif.verification_status === 'REJECTED'
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    }`}
+                  >
+                    STATUS: {postAttackVerif.verification_status} (SECOND VERIFICATION)
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-secondary mt-1 font-mono">
-                  Attack ID: <strong className="text-charcoal">{attackResult.attack_id}</strong> &bull; Target: {attackResult.target_signature_id}
+                <p className="text-xs text-secondary mt-1 font-mono">
+                  Attack ID: <strong className="text-charcoal">{attackResult.attack_id}</strong> &bull; Vector: {attackResult.attack_type.toUpperCase()}
                 </p>
               </div>
             </div>
 
-            <div className="text-right text-xs font-mono text-charcoal">
-              <div className="text-xs font-semibold text-secondary font-sans uppercase tracking-wider">Detection Status: <strong className="text-danger font-bold">Threat Anomaly Flagged</strong></div>
-              <div className="text-xs font-semibold text-secondary font-sans uppercase tracking-wider mt-1">Statistical Deviation: <strong className="text-2xl font-bold text-danger tracking-tight tabular-nums block">{((attackResult.statistical_deviation ?? 0) * 100).toFixed(1)}%</strong></div>
+            {/* Post-Attack Invariants Strip */}
+            <div className="flex items-center gap-3 text-xs font-mono text-charcoal">
+              <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[95px]">
+                <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Error (QBER)</span>
+                <strong className={`text-base font-bold tracking-tight tabular-nums block mt-0.5 ${postAttackVerif.qber > 0.15 ? 'text-danger' : 'text-success'}`}>
+                  {(postAttackVerif.qber * 100).toFixed(1)}%
+                </strong>
+              </div>
+              <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[95px]">
+                <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Verification</span>
+                <strong className="text-base font-bold text-danger block mt-0.5">
+                  {postAttackVerif.verification_status}
+                </strong>
+              </div>
+              <div className="p-2.5 rounded-xl bg-surface border border-[#EAEAEA] text-center min-w-[95px]">
+                <span className="text-[10px] font-semibold text-secondary uppercase block font-sans">Tokens</span>
+                <strong className="text-base font-bold text-charcoal block mt-0.5">
+                  {postAttackVerif.measurement_counts.matches}/{postAttackVerif.token_verifications.length} OK
+                </strong>
+              </div>
             </div>
+          </div>
+
+          {/* Comparison Note Banner */}
+          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-1">
+            <span className="font-bold block">Deterministic Physics Invariant Triggered:</span>
+            <p>
+              The clean signature state (initially verified as <strong>LEGITIMATE</strong> with 0.0% QBER) was physically disturbed by the simulated {attackResult.attack_type.replace('_', ' ')}. The second verification evaluated to <strong>{postAttackVerif.verification_status}</strong> (QBER = {(postAttackVerif.qber * 100).toFixed(1)}%).
+            </p>
           </div>
 
           {/* Side-by-Side: Original State vs Manipulated State */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 font-mono text-xs">
-            {/* Original State */}
             <div className="p-4 rounded-2xl bg-surface border border-[#EAEAEA] space-y-2">
-              <span className="text-[10px] text-success font-bold uppercase tracking-wider block font-sans">
-                Original Legitimate State
+              <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider block font-sans">
+                Original Legitimate State (Initial Verification)
               </span>
               <pre className="bg-white p-3 rounded-xl border border-[#EAEAEA] text-charcoal overflow-x-auto text-[11px]">
                 {JSON.stringify(attackResult.original_data, null, 2)}
               </pre>
             </div>
 
-            {/* Manipulated State */}
             <div className="p-4 rounded-2xl bg-surface border border-[#EAEAEA] space-y-2">
               <span className="text-[10px] text-danger font-bold uppercase tracking-wider block font-sans">
-                Evidence: Manipulated Quantum State
+                Evidence: Manipulated State After Attack
               </span>
               <pre className="bg-white p-3 rounded-xl border border-[#EAEAEA] text-charcoal overflow-x-auto text-[11px]">
                 {JSON.stringify(attackResult.manipulated_data, null, 2)}
@@ -604,24 +726,15 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
             </div>
           </div>
 
-          {/* Observed Measurements */}
-          <div className="p-4 rounded-2xl bg-surface border border-[#EAEAEA]">
-            <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider mb-2 font-sans">
-              Evidence: Resulting Physical Measurement Invariants
-            </h4>
-            <pre className="bg-white p-3 rounded-xl border border-[#EAEAEA] text-charcoal font-mono text-xs overflow-x-auto">
-              {JSON.stringify(attackResult.resulting_measurements, null, 2)}
-            </pre>
-          </div>
-
-          {/* Workflow Progression: Step 2 -> Step 3 */}
+          {/* Workflow Progression Button to Step 5 */}
           <div className="pt-4 border-t border-[#EAEAEA] flex flex-col sm:flex-row items-center justify-between gap-3">
             <div>
-              <span className="text-xs font-bold text-charcoal block">Attack Simulation Complete</span>
+              <span className="text-xs font-bold text-charcoal block">Attack Executed &amp; Post-Attack Verification Complete</span>
               <span className="text-[11px] text-secondary">
-                Simulated adversarial disturbance is ready for statistical evaluation and threshold detection.
+                Proceed to Step 5 to evaluate physical thresholds (TVD, Fidelity, QBER) and classify the threat.
               </span>
             </div>
+
             <button
               onClick={() => {
                 if (onContinueToDetection) {
@@ -636,7 +749,8 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
               }}
               className="btn-primary shrink-0"
             >
-              <span>Continue to Threat Detection &rarr;</span>
+              <span>Proceed to Step 5: Threat Detection</span>
+              <ArrowRight className="w-4 h-4 text-charcoal" />
             </button>
           </div>
         </div>
@@ -651,57 +765,51 @@ export const AttackSimulatorPage: React.FC<AttackSimulatorPageProps> = ({
           </div>
           <button
             onClick={loadData}
-            className="px-3.5 py-1.5 rounded-xl bg-white border border-[#EAEAEA] hover:border-yellow-400 hover:bg-yellow-50 text-xs font-semibold text-charcoal flex items-center space-x-1.5 transition-colors"
+            className="btn-secondary !h-8 text-xs"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-charcoal" />
+            <RefreshCw className="w-3 h-3" />
             <span>Refresh</span>
           </button>
         </div>
 
-        {history.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] p-8 text-center shadow-sm">
-            <div className="w-10 h-10 rounded-2xl bg-yellow-100 text-charcoal flex items-center justify-center mx-auto mb-2">
-              <History className="w-5 h-5 text-yellow-800" />
-            </div>
-            <h3 className="font-bold text-charcoal text-xs">No simulations yet</h3>
-            <p className="text-xs text-charcoal-500 mt-1">
-              Choose an attack scenario to begin a controlled simulation.
-            </p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-sans">
-                <thead className="bg-surface text-charcoal-500 uppercase tracking-wider font-semibold border-b border-[#EAEAEA]">
+        <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-surface text-charcoal-500 uppercase tracking-wider font-semibold border-b border-[#EAEAEA]">
+                <tr>
+                  <th className="py-3 px-4">Attack ID</th>
+                  <th className="py-3 px-4">Vector</th>
+                  <th className="py-3 px-4">Target Sig</th>
+                  <th className="py-3 px-4">Attacker</th>
+                  <th className="py-3 px-4">Deviation</th>
+                  <th className="py-3 px-4">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EAEAEA]">
+                {history.length === 0 ? (
                   <tr>
-                    <th className="py-3 px-4">Attack ID</th>
-                    <th className="py-3 px-4">Threat Type</th>
-                    <th className="py-3 px-4">Target Signature</th>
-                    <th className="py-3 px-4">Attacker Node</th>
-                    <th className="py-3 px-4">Anomaly Score</th>
-                    <th className="py-3 px-4">Expected Verdict</th>
+                    <td colSpan={6} className="py-8 text-center text-secondary">
+                      No attack simulations executed yet.
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EAEAEA] font-mono text-[11px]">
-                  {history.map((h) => (
+                ) : (
+                  history.map((h) => (
                     <tr key={h.attack_id} className="hover:bg-yellow-50/50 transition-colors">
-                      <td className="py-3 px-4 text-charcoal font-semibold">{h.attack_id}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-full bg-surface border border-[#EAEAEA] text-charcoal text-[10px] font-sans font-medium">
-                          {h.attack_type.toUpperCase()}
-                        </span>
+                      <td className="py-3 px-4 font-mono font-semibold text-charcoal">{h.attack_id}</td>
+                      <td className="py-3 px-4 font-semibold text-charcoal">{h.attack_type.toUpperCase().replace('_', ' ')}</td>
+                      <td className="py-3 px-4 font-mono text-secondary text-[11px]">{h.target_signature_id}</td>
+                      <td className="py-3 px-4 font-mono text-secondary">{h.attacker_id}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-charcoal">{(h.statistical_deviation * 100).toFixed(1)}%</td>
+                      <td className="py-3 px-4 text-secondary text-[11px] font-mono">
+                        {new Date(h.created_at).toLocaleTimeString()}
                       </td>
-                      <td className="py-3 px-4 text-charcoal-600">{h.target_signature_id}</td>
-                      <td className="py-3 px-4 text-charcoal-600">{h.attacker_id}</td>
-                      <td className="py-3 px-4 font-bold text-charcoal">{(h.statistical_deviation * 100).toFixed(1)}%</td>
-                      <td className="py-3 px-4 text-warning font-medium font-sans">{h.expected_outcome}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -154,7 +154,7 @@ def classify_threat_scenario(
         )
 
     # Rule 2: Replay Attack (Nonce Collision / Stale Window)
-    elif is_replay_attack or timestamp_delta > ThresholdCalibration.REPLAY_MAX_TIMESTAMP_DELTA:
+    elif is_replay_attack:
         status = ThreatStatus.ATTACK
         attack_type = ThreatClassification.REPLAY
         threat_score = 1.00
@@ -208,7 +208,7 @@ def classify_threat_scenario(
     else:
         status = ThreatStatus.LEGITIMATE
         attack_type = ThreatClassification.LEGITIMATE
-        threat_score = 0.05
+        threat_score = 0.0
         evidence.append(
             f"All quantum invariants verified: QBER = {qber:.1%} <= {ThresholdCalibration.QBER_MAX_THRESHOLD:.1%}, Fidelity = {fidelity:.1%} >= {ThresholdCalibration.FIDELITY_MIN_THRESHOLD:.1%}."
         )

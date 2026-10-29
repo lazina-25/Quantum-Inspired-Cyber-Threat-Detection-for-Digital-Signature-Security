@@ -137,3 +137,94 @@ def test_qds_list_signatures(client: TestClient):
     data = resp.json()
     assert isinstance(data, list)
     assert len(data) >= 1
+
+
+def test_two_stage_verification_workflow(client: TestClient):
+    """Verify Initial Verification is ACCEPTED, attack creates state, and Post-Attack Verification is REJECTED."""
+    # Step 1: Create Signature
+    create_resp = client.post("/api/signatures/create", json={
+        "signer_id": "alice_signer_01",
+        "message_content": "SECURE_FINANCIAL_TRANSACTION_#4491",
+        "token_count": 4,
+    })
+    assert create_resp.status_code == 201
+    sig_id = create_resp.json()["signature_id"]
+
+    # Step 2: Initial Verification (attack_id = None)
+    init_resp = client.post("/api/signatures/verify", json={
+        "signature_id": sig_id,
+        "message_content": "SECURE_FINANCIAL_TRANSACTION_#4491",
+        "verifier_id": "bob_verifier_01",
+    })
+    assert init_resp.status_code == 200
+    init_data = init_resp.json()
+    assert init_data["verification_status"] == "ACCEPTED"
+    assert init_data["verification_stage"] == "INITIAL"
+    assert init_data["qber"] == 0.0
+    assert init_data["verification_score"] == 1.0
+
+    # Step 3: Execute Attack (Forgery)
+    attack_resp = client.post("/api/attacks/forge", json={
+        "target_signature_id": sig_id,
+        "forged_message": "MALICIOUS_REDIRECT_TO_OFFSHORE_ACCOUNT",
+    })
+    assert attack_resp.status_code == 200
+    attack_id = attack_resp.json()["attack_id"]
+
+    # Step 4: Post-Attack Verification (attack_id provided)
+    post_resp = client.post("/api/signatures/verify", json={
+        "signature_id": sig_id,
+        "message_content": "SECURE_FINANCIAL_TRANSACTION_#4491",
+        "verifier_id": "bob_verifier_01",
+        "attack_id": attack_id,
+    })
+    assert post_resp.status_code == 200
+    post_data = post_resp.json()
+    assert post_data["verification_status"] == "REJECTED"
+    assert post_data["verification_stage"] == "POST_ATTACK"
+    assert post_data["qber"] > 0.0
+    assert post_data["is_message_tampered"] is True
+
+    # Step 5: Threat Detection with attack context
+    threat_resp = client.post("/api/detection/analyze", json={
+        "signature_id": sig_id,
+        "attack_context_id": attack_id,
+    })
+    assert threat_resp.status_code == 200
+    threat_data = threat_resp.json()
+    assert threat_data["status"] == "ATTACK"
+    assert threat_data["attack_type"] == "FORGERY"
+    assert threat_data["threat_score"] > 0.8
+
+
+def test_threat_detection_no_attack_is_strictly_legitimate(client: TestClient):
+    """Verify that when no attack is executed, threat detection is strictly NO THREAT DETECTED / LEGITIMATE."""
+    # Step 1: Create Signature
+    create_resp = client.post("/api/signatures/create", json={
+        "signer_id": "alice_signer_01",
+        "message_content": "CLEAN_AUDIT_LOG_ENTRY_#101",
+        "token_count": 4,
+    })
+    assert create_resp.status_code == 201
+    sig_id = create_resp.json()["signature_id"]
+
+    # Step 2: Initial Verification
+    init_resp = client.post("/api/signatures/verify", json={
+        "signature_id": sig_id,
+        "message_content": "CLEAN_AUDIT_LOG_ENTRY_#101",
+    })
+    assert init_resp.status_code == 200
+    assert init_resp.json()["verification_status"] == "ACCEPTED"
+
+    # Step 3: Direct Threat Detection without any attack
+    threat_resp = client.post("/api/detection/analyze", json={
+        "signature_id": sig_id,
+        "attack_context_id": None,
+    })
+    assert threat_resp.status_code == 200
+    threat_data = threat_resp.json()
+    assert threat_data["status"] == "LEGITIMATE"
+    assert threat_data["attack_type"] == "LEGITIMATE"
+    assert threat_data["threat_score"] == 0.0
+    assert threat_data["qber"] == 0.0
+
